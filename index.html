@@ -292,58 +292,10 @@ body{background:var(--cream);color:var(--ink);font-family:'Crimson Pro',Georgia,
 .toast.ok{border-color:var(--moss);color:var(--moss2);}
 .toast.err{border-color:var(--terracota);color:var(--terracota2);}
 
-/* PIN */
-#pin-screen{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:24px;z-index:150;background:var(--paper);}
-#pin-screen.show{display:flex;}
-.pin-title{text-align:center;}
-.pin-title h2{font-family:'Playfair Display',serif;font-size:22px;font-weight:900;color:var(--ink);}
-.pin-title p{font-family:'IM Fell English',serif;font-style:italic;font-size:13px;color:var(--ink4);margin-top:4px;}
-.pin-user-name{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--terracota);margin-top:4px;}
-.pin-dots{display:flex;gap:14px;justify-content:center;}
-.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border2);background:transparent;transition:all .2s;}
-.pin-dot.filled{background:var(--terracota);border-color:var(--terracota);}
-.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:220px;}
-.pin-key{background:var(--cream2);border:1px solid var(--border);border-radius:var(--r);padding:16px;font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--ink);cursor:pointer;text-align:center;transition:all .2s;}
-.pin-key:hover{background:var(--cream3);border-color:var(--border2);}
-.pin-key.del{font-size:16px;color:var(--ink3);}
-.pin-key.empty-key{background:transparent;border:none;cursor:default;}
-.pin-error{font-family:'IM Fell English',serif;font-style:italic;font-size:13px;color:var(--terracota);min-height:18px;}
-.pin-forgot{font-family:'IM Fell English',serif;font-style:italic;font-size:12px;color:var(--ink4);cursor:pointer;text-decoration:underline;}
-
 @media(max-width:600px){.form-grid{grid-template-columns:1fr;}.main{padding:13px;}.drawer{width:100%;}.login-frame{padding:32px 24px;}.topbar{padding:10px 16px;}.nav{padding:0 12px;}}
 </style>
 </head>
 <body>
-<div id="pin-screen">
-  <div class="pin-title">
-    <h2>Bem-vinda de volta</h2>
-    <p>Digite seu PIN para entrar</p>
-    <div class="pin-user-name" id="pin-user-name"></div>
-  </div>
-  <div class="pin-dots" id="pin-dots">
-    <div class="pin-dot" id="pd0"></div>
-    <div class="pin-dot" id="pd1"></div>
-    <div class="pin-dot" id="pd2"></div>
-    <div class="pin-dot" id="pd3"></div>
-  </div>
-  <div class="pin-error" id="pin-error"></div>
-  <div class="pin-pad">
-    <button class="pin-key" onclick="pinKey('1')">1</button>
-    <button class="pin-key" onclick="pinKey('2')">2</button>
-    <button class="pin-key" onclick="pinKey('3')">3</button>
-    <button class="pin-key" onclick="pinKey('4')">4</button>
-    <button class="pin-key" onclick="pinKey('5')">5</button>
-    <button class="pin-key" onclick="pinKey('6')">6</button>
-    <button class="pin-key" onclick="pinKey('7')">7</button>
-    <button class="pin-key" onclick="pinKey('8')">8</button>
-    <button class="pin-key" onclick="pinKey('9')">9</button>
-    <button class="pin-key empty-key"></button>
-    <button class="pin-key" onclick="pinKey('0')">0</button>
-    <button class="pin-key del" onclick="pinDel()">⌫</button>
-  </div>
-  <span class="pin-forgot" onclick="pinForgot()">Esqueci meu PIN</span>
-</div>
-
 <div id="login-screen">
   <div class="login-frame">
     <div class="login-eyebrow">✦ &nbsp; Gestão Doméstica &nbsp; ✦</div>
@@ -409,7 +361,7 @@ function sbPost(t,b){return sbApi('POST',t,b);}
 function sbDel(t,id){return sbApi('DELETE',t,null,'?id=eq.'+id);}
 function sbPatch(t,id,b){return sbApi('PATCH',t,b,'?id=eq.'+id);}
 
-var USER=null,TX_TYPE='expense',gid=10;
+var USER=null,TX_TYPE='expense',TX_NATURE='conjunto',gid=10;
 var PAGES=['dashboard','lancamento','historico','metas','config'];
 var CFG={m:58,mu:42,cycle_start:1,cycle_name:'',dark:false};
 var CATS=[{name:'Moradia',limit:0},{name:'Alimentação',limit:0},{name:'Transporte',limit:0},{name:'Saúde',limit:0},{name:'Lazer',limit:500},{name:'Educação',limit:0},{name:'Pets',limit:200},{name:'Outros',limit:0}];
@@ -420,7 +372,6 @@ function fmt(v){return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDi
 function fmtS(v){var n=Number(v);if(n>=1000)return 'R$ '+(n/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})+'k';return fmt(v);}
 function fmtDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function fmtDateShort(d){return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');}
-function curMonth(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
 function toast(msg,type){var el=document.getElementById('toast');el.textContent=msg;el.className='toast '+(type||'')+' show';setTimeout(function(){el.className='toast';},2200);}
 function catNames(){return CATS.map(function(c){return c.name;});}
 function catLimit(name){var c=CATS.find(function(x){return x.name===name;});return c?c.limit:0;}
@@ -524,11 +475,12 @@ function renderDash(){
     var mExp=exp.filter(function(t){return t.user_name==='Maria';}).reduce(function(s,t){return s+Number(t.amount);},0);
     var muExp=exp.filter(function(t){return t.user_name==='Murilo';}).reduce(function(s,t){return s+Number(t.amount);},0);
     var myExp=exp.filter(function(t){return t.user_name===USER;}).reduce(function(s,t){return s+Number(t.amount);},0);
-    var ideal=totExp*CFG.m/100;var diff=mExp-ideal;
-    var sp=totExp>0?Math.round(mExp/totExp*100):CFG.m;
+    // para divisão, considerar só pagamentos individuais (excluir Conjunto)
+    var expIndiv=exp.filter(function(t){return t.user_name!=='Conjunto';});
+    var totExpIndiv=expIndiv.reduce(function(s,t){return s+Number(t.amount);},0);
+    var ideal=totExpIndiv*CFG.m/100;var diff=mExp-ideal;
+    var sp=totExpIndiv>0?Math.round(mExp/totExpIndiv*100):CFG.m;
     var debt=Math.abs(diff)<0.5?'Tudo em ordem ✦':diff>0?'Murilo deve '+fmt(diff)+' a Maria':'Maria deve '+fmt(Math.abs(diff))+' a Murilo';
-
-    // Categories
     var cmap={};exp.forEach(function(t){cmap[t.category]=(cmap[t.category]||0)+Number(t.amount);});
     var carr=Object.keys(cmap).map(function(k){return{name:k,val:cmap[k],limit:catLimit(k)};}).sort(function(a,b){return b.val-a.val;});
     var maxC=carr.length?carr[0].val:1;
@@ -576,7 +528,7 @@ function renderDash(){
         '<div class="sum-tile rose"><div class="sum-label">Seus gastos</div><div class="sum-val rose">'+fmtS(myExp)+'</div><div class="sum-sub">'+USER+'</div></div>'+
       '</div>'+
       '<div class="card"><div class="card-title">Divisão do casal <small>'+CFG.m+'% · '+CFG.mu+'%</small></div>'+
-        '<div class="bal-box"><div class="bal-label">Maria vs. Murilo — valores pagos</div>'+
+        '<div class="bal-box"><div class="bal-label">Maria vs. Murilo — pagamentos individuais</div>'+
         '<div class="bal-bar"><div class="bal-fill" style="width:'+sp+'%"></div></div>'+
         '<div class="bal-names"><span>Maria '+fmtS(mExp)+' ('+sp+'%)</span><span>Murilo '+fmtS(muExp)+' ('+(100-sp)+'%)</span></div></div>'+
         '<div class="debt-box'+(Math.abs(diff)<0.5?' ok':'')+'">'+debt+'</div>'+
@@ -680,7 +632,6 @@ function saveEdit(id){
 function closeModal(){document.getElementById('modal-bg').classList.remove('show');}
 
 // ── FORM ──
-var TX_NATURE='conjunto';
 function renderForm(){
   var today=new Date().toISOString().split('T')[0];
   var cycle=curCycle();
@@ -696,7 +647,7 @@ function renderForm(){
       '<button class="nature-btn" id="nat-maria" onclick="setNature(\'Maria\')">Maria</button>'+
       '<button class="nature-btn" id="nat-murilo" onclick="setNature(\'Murilo\')">Murilo</button>'+
     '</div>'+
-    '<div class="field" style="margin-top:10px"><label>Pago por</label><select id="f-user"><option value="'+USER+'" selected>'+USER+'</option><option value="'+(USER==='Maria'?'Murilo':'Maria')+'">'+(USER==='Maria'?'Murilo':'Maria')+'</option></select></div>'+
+    '<div class="field" style="margin-top:10px"><label>Pago por</label><select id="f-user"><option value="'+USER+'" selected>'+USER+'</option><option value="'+(USER==='Maria'?'Murilo':'Maria')+'">'+(USER==='Maria'?'Murilo':'Maria')+'</option><option value="Conjunto">Conjunto</option></select></div>'+
     '<div class="field" style="margin-top:10px"><label>Observação</label><input type="text" id="f-obs" placeholder="Ex: parcelado em 3x, opcional..."></div>'+
     '<label class="recur-row"><input type="checkbox" id="f-recur"> Lançamento recorrente — repete todo ciclo</label>'+
     '<button class="btn-primary" id="btn-save" onclick="submitTx()">Registrar lançamento</button></div>';
@@ -838,10 +789,6 @@ function renderCfg(){
       '<div class="field" style="margin-top:8px"><input type="text" id="p-cname" value="'+(CFG.cycle_name||'')+'" placeholder="Nome opcional para este ciclo..."></div>'+
       '<button class="btn-primary" onclick="saveCycleConfig()">Salvar ciclo</button>'+
     '</div>'+
-    '<div class="card"><div class="card-title">Segurança</div>'+
-      '<div class="srow"><div><span class="slabel">PIN de acesso</span><div class="sdesc">'+(PINS[USER]?'PIN ativo — clique para alterar':'Sem PIN configurado')+'</div></div>'+
-      '<button onclick="openPinSetup()" style="background:var(--mustard-dim);border:1px solid var(--mustard);color:var(--mustard);padding:6px 12px;border-radius:var(--rs);font-family:\'Crimson Pro\',serif;font-size:13px;cursor:pointer">'+(PINS[USER]?'Alterar':'Configurar')+'</button></div>'+
-    '</div>'+
     '<div class="card"><div class="card-title">Exportar dados</div>'+
       '<div class="srow"><div><span class="slabel">Exportar ciclo atual (CSV)</span><div class="sdesc">Abre no Excel, Numbers ou Google Sheets</div></div>'+
       '<button onclick="exportCycle()" style="background:var(--moss-dim);border:1px solid var(--moss);color:var(--moss);padding:6px 12px;border-radius:var(--rs);font-family:\'Crimson Pro\',serif;font-size:13px;cursor:pointer">Exportar</button></div>'+
@@ -907,67 +854,15 @@ function switchUser(name){closeDrawer();USER=name;setTopbar(name);toast('Bem-vin
 document.getElementById('modal-bg').addEventListener('click',function(e){if(e.target===this)closeModal();});
 
 // ── PIN ──
-var PIN_USER=null;var PIN_INPUT='';var PINS={};
-try{var ps=localStorage.getItem('caderneta_pins');if(ps)PINS=JSON.parse(ps);}catch(e){}
-
-function savePins(){try{localStorage.setItem('caderneta_pins',JSON.stringify(PINS));}catch(e){}}
+// ── PIN ──
+// (removido — login direto por nome)
 
 function login(name){
-  PIN_USER=name;
-  if(PINS[name]){
-    document.getElementById('login-screen').style.display='none';
-    document.getElementById('pin-user-name').textContent=name;
-    PIN_INPUT='';updatePinDots();
-    document.getElementById('pin-error').textContent='';
-    document.getElementById('pin-screen').classList.add('show');
-  } else {
-    doLogin(name);
-  }
-}
-
-function doLogin(name){
   USER=name;
   document.getElementById('login-screen').style.display='none';
-  document.getElementById('pin-screen').classList.remove('show');
   document.getElementById('app').style.display='block';
   setTopbar(name);
   loadCFG().then(function(){goTo('dashboard');}).catch(function(){goTo('dashboard');});
-}
-
-function pinKey(k){
-  if(PIN_INPUT.length>=4)return;
-  PIN_INPUT+=k;
-  updatePinDots();
-  if(PIN_INPUT.length===4){
-    setTimeout(function(){
-      if(PIN_INPUT===PINS[PIN_USER]){
-        doLogin(PIN_USER);
-      } else {
-        document.getElementById('pin-error').textContent='PIN incorreto. Tente novamente.';
-        PIN_INPUT='';
-        updatePinDots();
-        // shake animation
-        var dots=document.getElementById('pin-dots');
-        dots.style.transform='translateX(-8px)';
-        setTimeout(function(){dots.style.transform='translateX(8px)';},100);
-        setTimeout(function(){dots.style.transform='';},200);
-      }
-    },100);
-  }
-}
-function pinDel(){if(PIN_INPUT.length>0){PIN_INPUT=PIN_INPUT.slice(0,-1);updatePinDots();}}
-function updatePinDots(){
-  for(var i=0;i<4;i++){
-    var d=document.getElementById('pd'+i);
-    if(d)d.className='pin-dot'+(i<PIN_INPUT.length?' filled':'');
-  }
-}
-function pinForgot(){
-  document.getElementById('pin-screen').classList.remove('show');
-  document.getElementById('login-screen').style.display='flex';
-  toast('Clique no seu nome para entrar sem PIN','ok');
-  // temporariamente remove o PIN
-  delete PINS[PIN_USER];savePins();
 }
 
 function logout(){
@@ -976,29 +871,6 @@ function logout(){
   document.getElementById('app').style.display='none';
 }
 function setTopbar(name){var av=document.getElementById('t-av');av.textContent=name==='Maria'?'M':'Mu';av.className='t-av '+name.toLowerCase();document.getElementById('t-name').textContent=name;}
-
-// PIN settings
-function openPinSetup(){
-  document.getElementById('modal-content').innerHTML=
-    '<h3>Configurar PIN</h3>'+
-    '<p style="font-family:\'IM Fell English\',serif;font-style:italic;font-size:13px;color:var(--ink4);margin-bottom:14px">Defina um PIN de 4 dígitos para proteger sua entrada.</p>'+
-    '<div class="field"><label>Novo PIN (4 dígitos)</label><input type="password" id="pin-new" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="••••"></div>'+
-    '<div class="field" style="margin-top:9px"><label>Confirmar PIN</label><input type="password" id="pin-conf" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="••••"></div>'+
-    '<div class="modal-actions"><button class="btn-primary" onclick="savePin()">Salvar PIN</button><button class="btn-secondary" onclick="removePin()">Remover PIN</button></div>';
-  document.getElementById('modal-bg').classList.add('show');
-}
-function savePin(){
-  var p1=document.getElementById('pin-new').value;
-  var p2=document.getElementById('pin-conf').value;
-  if(p1.length!==4||!/^\d{4}$/.test(p1)){toast('PIN deve ter 4 dígitos','err');return;}
-  if(p1!==p2){toast('PINs não coincidem','err');return;}
-  PINS[USER]=p1;savePins();
-  closeModal();toast('PIN configurado!','ok');
-}
-function removePin(){
-  delete PINS[USER];savePins();
-  closeModal();toast('PIN removido','ok');
-}
 
 // ── EXPORTAR CSV ──
 function exportCycle(){
