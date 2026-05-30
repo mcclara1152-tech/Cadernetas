@@ -163,6 +163,19 @@ body{background:var(--cream);color:var(--ink);font-family:'Crimson Pro',Georgia,
 .tx-btn.del:hover{color:var(--terracota);}
 .tx-btn.edit:hover{color:var(--mustard);}
 .tag-recur{font-size:9px;padding:1px 5px;border-radius:10px;background:var(--rose-dim);color:var(--rose);border:1px solid var(--rose);margin-left:4px;vertical-align:middle;letter-spacing:1px;text-transform:uppercase;}
+.tag-conjunto{font-size:9px;padding:1px 5px;border-radius:10px;background:var(--mustard-dim);color:var(--mustard);border:1px solid var(--mustard);margin-left:4px;vertical-align:middle;letter-spacing:1px;text-transform:uppercase;}
+.tag-maria{font-size:9px;padding:1px 5px;border-radius:10px;background:var(--terracota-dim);color:var(--terracota);border:1px solid var(--terracota);margin-left:4px;vertical-align:middle;letter-spacing:1px;text-transform:uppercase;}
+.tag-murilo{font-size:9px;padding:1px 5px;border-radius:10px;background:var(--moss-dim);color:var(--moss);border:1px solid var(--moss);margin-left:4px;vertical-align:middle;letter-spacing:1px;text-transform:uppercase;}
+.nature-toggle{display:flex;gap:6px;margin-top:10px;}
+.nature-btn{flex:1;padding:7px 4px;border-radius:var(--rs);border:1.5px solid var(--border);background:var(--cream2);color:var(--ink3);cursor:pointer;font-family:'Crimson Pro',serif;font-size:13px;transition:all .2s;text-align:center;}
+.nature-btn.sel-maria{background:var(--terracota-dim);border-color:var(--terracota);color:var(--terracota);}
+.nature-btn.sel-murilo{background:var(--moss-dim);border-color:var(--moss);color:var(--moss);}
+.nature-btn.sel-conjunto{background:var(--mustard-dim);border-color:var(--mustard);color:var(--mustard);}
+/* BOLO */
+.bolo-box{background:var(--cream2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:9px;}
+.bolo-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--ink3);}
+.bolo-row:last-child{border-bottom:none;padding-top:10px;font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:var(--ink);}
+.bolo-val{font-family:'Playfair Display',serif;font-size:13px;}
 
 /* FORM */
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
@@ -278,10 +291,59 @@ body{background:var(--cream);color:var(--ink);font-family:'Crimson Pro',Georgia,
 .toast.show{transform:translateX(-50%) translateY(0);}
 .toast.ok{border-color:var(--moss);color:var(--moss2);}
 .toast.err{border-color:var(--terracota);color:var(--terracota2);}
+
+/* PIN */
+#pin-screen{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:24px;z-index:150;background:var(--paper);}
+#pin-screen.show{display:flex;}
+.pin-title{text-align:center;}
+.pin-title h2{font-family:'Playfair Display',serif;font-size:22px;font-weight:900;color:var(--ink);}
+.pin-title p{font-family:'IM Fell English',serif;font-style:italic;font-size:13px;color:var(--ink4);margin-top:4px;}
+.pin-user-name{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--terracota);margin-top:4px;}
+.pin-dots{display:flex;gap:14px;justify-content:center;}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border2);background:transparent;transition:all .2s;}
+.pin-dot.filled{background:var(--terracota);border-color:var(--terracota);}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:220px;}
+.pin-key{background:var(--cream2);border:1px solid var(--border);border-radius:var(--r);padding:16px;font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--ink);cursor:pointer;text-align:center;transition:all .2s;}
+.pin-key:hover{background:var(--cream3);border-color:var(--border2);}
+.pin-key.del{font-size:16px;color:var(--ink3);}
+.pin-key.empty-key{background:transparent;border:none;cursor:default;}
+.pin-error{font-family:'IM Fell English',serif;font-style:italic;font-size:13px;color:var(--terracota);min-height:18px;}
+.pin-forgot{font-family:'IM Fell English',serif;font-style:italic;font-size:12px;color:var(--ink4);cursor:pointer;text-decoration:underline;}
+
 @media(max-width:600px){.form-grid{grid-template-columns:1fr;}.main{padding:13px;}.drawer{width:100%;}.login-frame{padding:32px 24px;}.topbar{padding:10px 16px;}.nav{padding:0 12px;}}
 </style>
 </head>
 <body>
+<div id="pin-screen">
+  <div class="pin-title">
+    <h2>Bem-vinda de volta</h2>
+    <p>Digite seu PIN para entrar</p>
+    <div class="pin-user-name" id="pin-user-name"></div>
+  </div>
+  <div class="pin-dots" id="pin-dots">
+    <div class="pin-dot" id="pd0"></div>
+    <div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div>
+    <div class="pin-dot" id="pd3"></div>
+  </div>
+  <div class="pin-error" id="pin-error"></div>
+  <div class="pin-pad">
+    <button class="pin-key" onclick="pinKey('1')">1</button>
+    <button class="pin-key" onclick="pinKey('2')">2</button>
+    <button class="pin-key" onclick="pinKey('3')">3</button>
+    <button class="pin-key" onclick="pinKey('4')">4</button>
+    <button class="pin-key" onclick="pinKey('5')">5</button>
+    <button class="pin-key" onclick="pinKey('6')">6</button>
+    <button class="pin-key" onclick="pinKey('7')">7</button>
+    <button class="pin-key" onclick="pinKey('8')">8</button>
+    <button class="pin-key" onclick="pinKey('9')">9</button>
+    <button class="pin-key empty-key"></button>
+    <button class="pin-key" onclick="pinKey('0')">0</button>
+    <button class="pin-key del" onclick="pinDel()">⌫</button>
+  </div>
+  <span class="pin-forgot" onclick="pinForgot()">Esqueci meu PIN</span>
+</div>
+
 <div id="login-screen">
   <div class="login-frame">
     <div class="login-eyebrow">✦ &nbsp; Gestão Doméstica &nbsp; ✦</div>
@@ -432,15 +494,7 @@ function fetchRows(start,end,type,user,cat){
 }
 
 // ── AUTH ──
-function login(name){
-  USER=name;
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('app').style.display='block';
-  setTopbar(name);
-  loadCFG().then(function(){goTo('dashboard');}).catch(function(){goTo('dashboard');});
-}
-function logout(){closeDrawer();USER=null;document.getElementById('login-screen').style.display='flex';document.getElementById('app').style.display='none';}
-function setTopbar(name){var av=document.getElementById('t-av');av.textContent=name==='Maria'?'M':'Mu';av.className='t-av '+name.toLowerCase();document.getElementById('t-name').textContent=name;}
+// (funções login, doLogin, logout, setTopbar definidas abaixo junto ao PIN)
 
 // ── NAV ──
 function goTo(page){
@@ -491,19 +545,30 @@ function renderDash(){
     var recurTotal=recur.reduce(function(s,t){return s+Number(t.amount);},0);
     var recurHtml=recur.length?'<div class="recur-summary">'+recur.map(function(t){return '<div class="recur-item"><span class="recur-name">'+t.description+'</span><span class="recur-amt">−'+fmt(t.amount)+'</span></div>';}).join('')+'<div class="recur-total"><span>Total fixo comprometido</span><span style="color:var(--terracota)">−'+fmt(recurTotal)+'</span></div></div>':'<div class="empty" style="padding:16px">Nenhum recorrente cadastrado.</div>';
 
-    // Projeção: receitas - recorrentes
-    var totalInc=inc.reduce(function(s,t){return s+Number(t.amount);},0);
-    var recurAll=all.filter(function(t){return t.recurring&&t.type==='expense';}).reduce(function(s,t){return s+Number(t.amount);},0);
-    var projSaldo=totalInc-totExp;
+    // Projeção
+    var projSaldo=totInc-totExp;
 
     // Nota do ciclo
     var noteKey='cycle_note_'+cycle.start;
     var noteHtml='<div class="cycle-note-box"><div class="cycle-note-lbl">Nota do ciclo</div><div id="cycle-note-display"></div><button class="btn-secondary" style="margin-top:8px" onclick="openCycleNote(\''+cycle.start+'\',\''+cycle.end+'\')">✎ Editar nota</button></div>';
 
+    // Bolo conjunto
+    var conjExp=exp.filter(function(t){return t.nature==='conjunto';}).reduce(function(s,t){return s+Number(t.amount);},0);
+    var mariaInd=exp.filter(function(t){return t.nature==='Maria';}).reduce(function(s,t){return s+Number(t.amount);},0);
+    var muriloInd=exp.filter(function(t){return t.nature==='Murilo';}).reduce(function(s,t){return s+Number(t.amount);},0);
+    var bolo=totInc-conjExp-mariaInd-muriloInd;
+    var boloHtml='<div class="bolo-box">'+
+      '<div class="bolo-row"><span>Renda total</span><span class="bolo-val" style="color:var(--moss)">+'+fmt(totInc)+'</span></div>'+
+      '<div class="bolo-row"><span>Despesas conjuntas</span><span class="bolo-val" style="color:var(--terracota)">−'+fmt(conjExp)+'</span></div>'+
+      '<div class="bolo-row"><span>Individuais Maria</span><span class="bolo-val" style="color:var(--terracota)">−'+fmt(mariaInd)+'</span></div>'+
+      '<div class="bolo-row"><span>Individuais Murilo</span><span class="bolo-val" style="color:var(--terracota)">−'+fmt(muriloInd)+'</span></div>'+
+      '<div class="bolo-row"><span>Bolo disponível</span><span class="bolo-val" style="color:'+(bolo>=0?'var(--moss)':'var(--terracota)')+'\">'+(bolo>=0?'+':'')+fmt(bolo)+'</span></div>'+
+    '</div>';
+
     var cycleName=CFG.cycle_name?'<em> — '+CFG.cycle_name+'</em>':'';
     document.getElementById('main').innerHTML=
       alertHtml+
-      '<div class="page-header"><div class="orn-sm">— ✿ —</div><h2>Ciclo <em>'+cycle.label+'</em>'+cycleName+'</h2><p>'+cycle.daysLeft+' dias restantes neste ciclo</p></div>'+
+      '<div class="page-header"><div class="orn-sm">— ✿ —</div><h2>Ciclo <em>'+cycle.label+'</em>'+cycleName+'</h2><p>'+cycle.daysLeft+' dias restantes · <span style="cursor:pointer;text-decoration:underline;color:var(--mustard)" onclick="exportCycle()">exportar ciclo</span></p></div>'+
       '<div class="sum-grid">'+
         '<div class="sum-tile green"><div class="sum-label">Receitas</div><div class="sum-val green">'+fmtS(totInc)+'</div><div class="sum-sub">'+inc.length+' lançamentos</div></div>'+
         '<div class="sum-tile red"><div class="sum-label">Despesas</div><div class="sum-val red">'+fmtS(totExp)+'</div><div class="sum-sub">'+exp.length+' lançamentos</div></div>'+
@@ -519,16 +584,19 @@ function renderDash(){
       '<div class="card"><div class="card-title">Projeção do ciclo</div>'+
         '<div class="proj-box"><div class="proj-label">Saldo projetado</div>'+
         '<div class="proj-val" style="color:'+(projSaldo>=0?'var(--moss)':'var(--terracota)')+'\">'+(projSaldo>=0?'+':'')+fmt(projSaldo)+'</div>'+
-        '<div class="proj-detail">Receitas '+fmt(totalInc)+' − Despesas atuais '+fmt(totExp)+'</div></div>'+
+        '<div class="proj-detail">Receitas '+fmt(totInc)+' − Despesas atuais '+fmt(totExp)+'</div></div>'+
       '</div>'+
+      '<div class="card"><div class="card-title">Bolo do casal <small>individual · conjunto</small></div>'+boloHtml+'</div>'+
       (carr.length?'<div class="card"><div class="card-title">Por categoria <small>com limites</small></div><div class="cat-list">'+catHtml+'</div></div>':'')+
       (recur.length?'<div class="card"><div class="card-title">Gastos fixos do ciclo</div>'+recurHtml+'</div>':'')+
       '<div class="card"><div class="card-title">Evolução dos saldos <small>últimos 3 ciclos</small></div><div id="chart-slot"></div></div>'+
       noteHtml+
+      '<div class="card"><div class="card-title">Vs. ciclo anterior <small>por categoria</small></div><div id="compare-slot"><div class="empty" style="padding:12px">carregando...</div></div></div>'+
       (all.length?'<div class="card"><div class="card-title">Lançamentos recentes</div><div class="tx-list">'+all.slice(0,8).map(mkTx).join('')+'</div></div>':'<div class="empty">Nenhum lançamento neste ciclo.</div>');
 
     buildChart();
     loadCycleNote(noteKey);
+    buildComparativo();
   }).catch(function(e){errBox(e.message);});
 }
 
@@ -585,8 +653,12 @@ function mkTx(t){
   var own=t.user_name===USER;
   var icon=t.type==='income'?'✦':'◆';
   var recTag=t.recurring?'<span class="tag-recur">recorrente</span>':'';
+  var natTag='';
+  if(t.nature==='conjunto') natTag='<span class="tag-conjunto">conjunto</span>';
+  else if(t.nature==='Maria') natTag='<span class="tag-maria">Maria</span>';
+  else if(t.nature==='Murilo') natTag='<span class="tag-murilo">Murilo</span>';
   var obsHtml=t.obs?'<div class="tx-obs">'+t.obs+'</div>':'';
-  return '<div class="tx-item"><div class="tx-icon" style="color:'+(t.type==='income'?'var(--moss)':'var(--terracota)')+'">'+icon+'</div><div class="tx-info"><div class="tx-desc">'+t.description+recTag+'</div><div class="tx-meta">'+t.category+' · '+t.user_name+' · '+t.date+'</div>'+obsHtml+'</div><div class="tx-amt '+t.type+'">'+(t.type==='expense'?'−':'+')+fmt(t.amount)+'</div>'+(own?'<div class="tx-actions"><button class="tx-btn edit" onclick="openEdit(\''+t.id+'\')" title="Editar">✎</button><button class="tx-btn del" onclick="delTx(\''+t.id+'\')" title="Deletar">×</button></div>':'<div style="width:44px"></div>')+'</div>';
+  return '<div class="tx-item"><div class="tx-icon" style="color:'+(t.type==='income'?'var(--moss)':'var(--terracota)')+'">'+icon+'</div><div class="tx-info"><div class="tx-desc">'+t.description+recTag+natTag+'</div><div class="tx-meta">'+t.category+' · '+t.user_name+' · '+t.date+'</div>'+obsHtml+'</div><div class="tx-amt '+t.type+'">'+(t.type==='expense'?'−':'+')+fmt(t.amount)+'</div>'+(own?'<div class="tx-actions"><button class="tx-btn edit" onclick="openEdit(\''+t.id+'\')" title="Editar">✎</button><button class="tx-btn del" onclick="delTx(\''+t.id+'\')" title="Deletar">×</button></div>':'<div style="width:44px"></div>')+'</div>';
 }
 function delTx(id){sbDel('fin_transactions',id).then(function(){toast('Removido','ok');goTo(curPage());}).catch(function(){toast('Erro','err');});}
 
@@ -608,21 +680,34 @@ function saveEdit(id){
 function closeModal(){document.getElementById('modal-bg').classList.remove('show');}
 
 // ── FORM ──
+var TX_NATURE='conjunto';
 function renderForm(){
   var today=new Date().toISOString().split('T')[0];
   var cycle=curCycle();
-  var other=USER==='Maria'?'Murilo':'Maria';
   var catOpts=catNames().map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
-  TX_TYPE='expense';
+  TX_TYPE='expense';TX_NATURE='conjunto';
   document.getElementById('main').innerHTML=
     '<div class="page-header"><div class="orn-sm">— ✿ —</div><h2>Novo <em>Lançamento</em></h2><p>Ciclo atual: '+cycle.label+'</p></div>'+
     '<div class="card"><div class="type-toggle"><button class="type-btn exp" id="btn-exp" onclick="setType(\'expense\')">↓ Despesa</button><button class="type-btn" id="btn-inc" onclick="setType(\'income\')">↑ Receita</button></div>'+
-    '<div class="form-grid"><div class="field"><label>Descrição</label><input type="text" id="f-desc" placeholder="Ex: Mercado, Aluguel..."></div><div class="field"><label>Valor (R$)</label><input type="number" id="f-val" placeholder="0,00" min="0" step="0.01"></div><div class="field"><label>Categoria</label><select id="f-cat">'+catOpts+'</select></div><div class="field"><label>Data</label><input type="date" id="f-date" value="'+today+'"></div><div class="field"><label>Pago por</label><select id="f-user"><option value="'+USER+'" selected>'+USER+'</option><option value="'+other+'">'+other+'</option></select></div></div>'+
+    '<div class="form-grid"><div class="field"><label>Descrição</label><input type="text" id="f-desc" placeholder="Ex: Mercado, Aluguel..."></div><div class="field"><label>Valor (R$)</label><input type="number" id="f-val" placeholder="0,00" min="0" step="0.01"></div><div class="field"><label>Categoria</label><select id="f-cat">'+catOpts+'</select></div><div class="field"><label>Data</label><input type="date" id="f-date" value="'+today+'"></div></div>'+
+    '<div class="field" style="margin-top:10px"><label>Natureza do gasto</label></div>'+
+    '<div class="nature-toggle">'+
+      '<button class="nature-btn sel-conjunto" id="nat-conjunto" onclick="setNature(\'conjunto\')">Conjunto</button>'+
+      '<button class="nature-btn" id="nat-maria" onclick="setNature(\'Maria\')">Maria</button>'+
+      '<button class="nature-btn" id="nat-murilo" onclick="setNature(\'Murilo\')">Murilo</button>'+
+    '</div>'+
+    '<div class="field" style="margin-top:10px"><label>Pago por</label><select id="f-user"><option value="'+USER+'" selected>'+USER+'</option><option value="'+(USER==='Maria'?'Murilo':'Maria')+'">'+(USER==='Maria'?'Murilo':'Maria')+'</option></select></div>'+
     '<div class="field" style="margin-top:10px"><label>Observação</label><input type="text" id="f-obs" placeholder="Ex: parcelado em 3x, opcional..."></div>'+
     '<label class="recur-row"><input type="checkbox" id="f-recur"> Lançamento recorrente — repete todo ciclo</label>'+
     '<button class="btn-primary" id="btn-save" onclick="submitTx()">Registrar lançamento</button></div>';
 }
 function setType(t){TX_TYPE=t;document.getElementById('btn-exp').className='type-btn'+(t==='expense'?' exp':'');document.getElementById('btn-inc').className='type-btn'+(t==='income'?' inc':'');}
+function setNature(n){
+  TX_NATURE=n;
+  document.getElementById('nat-conjunto').className='nature-btn'+(n==='conjunto'?' sel-conjunto':'');
+  document.getElementById('nat-maria').className='nature-btn'+(n==='Maria'?' sel-maria':'');
+  document.getElementById('nat-murilo').className='nature-btn'+(n==='Murilo'?' sel-murilo':'');
+}
 function submitTx(){
   var desc=document.getElementById('f-desc').value.trim();
   var val=parseFloat(document.getElementById('f-val').value);
@@ -634,7 +719,7 @@ function submitTx(){
   var recur=document.getElementById('f-recur').checked;
   if(!desc||!val||val<=0){toast('Preencha descrição e valor','err');return;}
   var btn=document.getElementById('btn-save');btn.disabled=true;btn.textContent='Registrando...';
-  sbPost('fin_transactions',{description:desc,amount:val,category:cat,date:date,month:mon,type:TX_TYPE,user_name:who,obs:obs,recurring:recur,created_by:USER}).then(function(){
+  sbPost('fin_transactions',{description:desc,amount:val,category:cat,date:date,month:mon,type:TX_TYPE,user_name:who,nature:TX_NATURE,obs:obs,recurring:recur,created_by:USER}).then(function(){
     btn.textContent='Registrado ✦';btn.className='btn-primary saved';
     setTimeout(function(){renderForm();},900);
   }).catch(function(e){toast('Erro: '+e.message,'err');btn.disabled=false;btn.textContent='Registrar lançamento';});
@@ -647,7 +732,7 @@ function renderHist(){
   var cycleOpts=cycles.map(function(c,i){return '<option value="'+c.start+'|'+c.end+'"'+(i===0?' selected':'')+'>'+c.label+'</option>';}).join('');
   document.getElementById('main').innerHTML=
     '<div class="page-header"><div class="orn-sm">— ✿ —</div><h2><em>Histórico</em></h2><p>Todos os lançamentos por ciclo</p></div>'+
-    '<div class="card"><div class="filter-bar"><select class="fsel" id="fil-cy" onchange="filterH()">'+cycleOpts+'</select><select class="fsel" id="fil-t" onchange="filterH()"><option value="">Todos</option><option value="expense">Despesas</option><option value="income">Receitas</option></select><select class="fsel" id="fil-u" onchange="filterH()"><option value="">Todos</option><option value="Maria">Maria</option><option value="Murilo">Murilo</option></select><select class="fsel" id="fil-cat" onchange="filterH()"><option value="">Categorias</option>'+catOpts+'</select></div><div id="hist-summary" style="margin-bottom:10px"></div><div id="hist-list"><div class="empty">carregando...</div></div></div>';
+    '<div class="card"><div class="filter-bar"><select class="fsel" id="fil-cy" onchange="filterH()">'+cycleOpts+'</select><select class="fsel" id="fil-t" onchange="filterH()"><option value="">Todos</option><option value="expense">Despesas</option><option value="income">Receitas</option></select><select class="fsel" id="fil-u" onchange="filterH()"><option value="">Todos</option><option value="Maria">Maria</option><option value="Murilo">Murilo</option></select><select class="fsel" id="fil-nat" onchange="filterH()"><option value="">Natureza</option><option value="conjunto">Conjunto</option><option value="Maria">Individual Maria</option><option value="Murilo">Individual Murilo</option></select><select class="fsel" id="fil-cat" onchange="filterH()"><option value="">Categorias</option>'+catOpts+'</select></div><div id="hist-summary" style="margin-bottom:10px"></div><div id="hist-list"><div class="empty">carregando...</div></div></div>';
   filterH();
 }
 function filterH(){
@@ -655,11 +740,13 @@ function filterH(){
   var parts=cv.split('|');var start=parts[0];var end=parts[1];
   var t=(document.getElementById('fil-t')||{}).value||'';
   var u=(document.getElementById('fil-u')||{}).value||'';
+  var nat=(document.getElementById('fil-nat')||{}).value||'';
   var cat=(document.getElementById('fil-cat')||{}).value||'';
   var list=document.getElementById('hist-list');
   var sumEl=document.getElementById('hist-summary');
   if(list)list.innerHTML='<div class="empty">carregando...</div>';
   fetchRows(start,end,t,u,cat).then(function(rows){
+    if(nat) rows=rows.filter(function(r){return r.nature===nat;});
     if(!rows.length){if(list)list.innerHTML='<div class="empty">Nenhum lançamento encontrado neste ciclo.</div>';if(sumEl)sumEl.innerHTML='';return;}
     var totExp=rows.filter(function(x){return x.type==='expense';}).reduce(function(s,x){return s+Number(x.amount);},0);
     var totInc=rows.filter(function(x){return x.type==='income';}).reduce(function(s,x){return s+Number(x.amount);},0);
@@ -670,18 +757,24 @@ function filterH(){
 }
 
 // ── COMPARATIVO ──
-function renderComparativo(prevCycle){
-  var curC=curCycle();
-  Promise.all([fetchRows(curC.start,curC.end),fetchRows(prevCycle.start,prevCycle.end)]).then(function(res){
-    var cur=res[0];var prev=res[1];
-    var curExp=cur.filter(function(t){return t.type==='expense';});
-    var prevExp=prev.filter(function(t){return t.type==='expense';});
+function buildComparativo(){
+  var cycles=lastCycles(2);
+  if(cycles.length<2)return;
+  var cur=cycles[0];var prev=cycles[1];
+  Promise.all([fetchRows(cur.start,cur.end),fetchRows(prev.start,prev.end)]).then(function(res){
+    var curExp=res[0].filter(function(t){return t.type==='expense';});
+    var prevExp=res[1].filter(function(t){return t.type==='expense';});
     var cats={};
     curExp.forEach(function(t){cats[t.category]=cats[t.category]||{cur:0,prev:0};cats[t.category].cur+=Number(t.amount);});
     prevExp.forEach(function(t){cats[t.category]=cats[t.category]||{cur:0,prev:0};cats[t.category].prev+=Number(t.amount);});
-    var rows=Object.keys(cats).map(function(k){var d=cats[k];var diff=d.cur-d.prev;var cls=Math.abs(diff)<1?'compare-same':diff>0?'compare-up':'compare-down';var arrow=Math.abs(diff)<1?'=':diff>0?'↑':'↓';return '<div class="compare-row"><span class="compare-cat">'+k+'</span><div class="compare-vals"><span>'+fmt(d.prev)+'</span><span class="'+cls+'">'+arrow+' '+fmt(d.cur)+'</span></div></div>';}).join('');
+    var rows=Object.keys(cats).sort().map(function(k){
+      var d=cats[k];var diff=d.cur-d.prev;
+      var cls=Math.abs(diff)<1?'compare-same':diff>0?'compare-up':'compare-down';
+      var arrow=Math.abs(diff)<1?'=':diff>0?'↑':'↓';
+      return '<div class="compare-row"><span class="compare-cat">'+k+'</span><div class="compare-vals"><span style="color:var(--ink4)">'+fmt(d.prev)+'</span><span class="'+cls+'">'+arrow+' '+fmt(d.cur)+'</span></div></div>';
+    }).join('');
     var el=document.getElementById('compare-slot');
-    if(el)el.innerHTML=rows||'<div class="empty" style="padding:12px">Dados insuficientes para comparar.</div>';
+    if(el)el.innerHTML=rows||'<div class="empty" style="padding:12px">Sem dados para comparar.</div>';
   }).catch(function(){});
 }
 
@@ -721,7 +814,15 @@ function removeGoal(id){GOALS=GOALS.filter(function(x){return x.id!==id;});saveC
 
 // ── CONFIG ──
 function renderCfg(){
-  var catRows=CATS.map(function(c,i){return '<div class="cat-row"><span>'+c.name+'</span><div style="display:flex;gap:7px;align-items:center"><input style="background:var(--cream2);border:1px solid var(--border);border-radius:var(--rs);color:var(--ink);padding:4px 8px;font-size:13px;width:96px;outline:none" type="number" placeholder="sem limite" value="'+(c.limit||'')+'" oninput="updateLimit('+i+',this.value)" min="0" step="0.01"><button class="btn-x" onclick="remCat('+i+')">×</button></div></div>';}).join('');
+  var catRows=CATS.map(function(c,i){
+    return '<div class="cat-row">'+
+      '<input style="background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--ink2);padding:2px 4px;font-size:14px;font-family:\'Crimson Pro\',serif;outline:none;flex:1;min-width:0" value="'+c.name+'" onblur="renameCAT('+i+',this.value)" onkeydown="if(event.key===\'Enter\')this.blur()">'+
+      '<div style="display:flex;gap:7px;align-items:center;margin-left:8px">'+
+        '<input style="background:var(--cream2);border:1px solid var(--border);border-radius:var(--rs);color:var(--ink);padding:4px 8px;font-size:13px;width:96px;outline:none" type="number" placeholder="sem limite" value="'+(c.limit||'')+'" oninput="updateLimit('+i+',this.value)" min="0" step="0.01">'+
+        '<button class="btn-x" onclick="remCat('+i+')">×</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
   var cycle=curCycle();
   document.getElementById('main').innerHTML=
     '<div class="page-header"><div class="orn-sm">— ✿ —</div><h2><em>Configurações</em></h2><p>Ajuste a divisão, ciclo e categorias</p></div>'+
@@ -737,7 +838,15 @@ function renderCfg(){
       '<div class="field" style="margin-top:8px"><input type="text" id="p-cname" value="'+(CFG.cycle_name||'')+'" placeholder="Nome opcional para este ciclo..."></div>'+
       '<button class="btn-primary" onclick="saveCycleConfig()">Salvar ciclo</button>'+
     '</div>'+
-    '<div class="card"><div class="card-title">Categorias <small>limite mensal opcional</small></div>'+
+    '<div class="card"><div class="card-title">Segurança</div>'+
+      '<div class="srow"><div><span class="slabel">PIN de acesso</span><div class="sdesc">'+(PINS[USER]?'PIN ativo — clique para alterar':'Sem PIN configurado')+'</div></div>'+
+      '<button onclick="openPinSetup()" style="background:var(--mustard-dim);border:1px solid var(--mustard);color:var(--mustard);padding:6px 12px;border-radius:var(--rs);font-family:\'Crimson Pro\',serif;font-size:13px;cursor:pointer">'+(PINS[USER]?'Alterar':'Configurar')+'</button></div>'+
+    '</div>'+
+    '<div class="card"><div class="card-title">Exportar dados</div>'+
+      '<div class="srow"><div><span class="slabel">Exportar ciclo atual (CSV)</span><div class="sdesc">Abre no Excel, Numbers ou Google Sheets</div></div>'+
+      '<button onclick="exportCycle()" style="background:var(--moss-dim);border:1px solid var(--moss);color:var(--moss);padding:6px 12px;border-radius:var(--rs);font-family:\'Crimson Pro\',serif;font-size:13px;cursor:pointer">Exportar</button></div>'+
+    '</div>'+
+    '<div class="card"><div class="card-title">Categorias <small>clique no nome para renomear</small></div>'+
       '<div class="cat-mgr">'+catRows+'</div>'+
       '<div class="add-row"><input class="add-input" id="new-cat" placeholder="Nova categoria..." onkeydown="if(event.key===\'Enter\')addCat()"><button class="btn-add" onclick="addCat()">+</button></div>'+
     '</div>';
@@ -751,6 +860,14 @@ function saveCycleConfig(){
   CFG.cycle_start=v;CFG.cycle_name=name;
   saveCFG('cycle_start',v);saveCFG('cycle_name',name);
   toast('Ciclo salvo!','ok');renderCfg();
+}
+function renameCAT(i,v){
+  v=v.trim();
+  if(!v){toast('Nome não pode ser vazio','err');renderCfg();return;}
+  if(CATS.find(function(c,idx){return c.name===v&&idx!==i;})){toast('Já existe uma categoria com esse nome','err');renderCfg();return;}
+  CATS[i].name=v;
+  saveCFG('cats',JSON.stringify(CATS));
+  toast('Categoria renomeada!','ok');
 }
 function updateLimit(i,v){CATS[i].limit=parseFloat(v)||0;saveCFG('cats',JSON.stringify(CATS));}
 function remCat(i){CATS.splice(i,1);saveCFG('cats',JSON.stringify(CATS));toast('Removida','ok');renderCfg();}
@@ -788,6 +905,131 @@ function ds(lbl,val,cls){return '<div class="dstat"><span class="dstat-lbl">'+lb
 function switchUser(name){closeDrawer();USER=name;setTopbar(name);toast('Bem-vinda, '+name+'!','ok');goTo('dashboard');}
 
 document.getElementById('modal-bg').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+// ── PIN ──
+var PIN_USER=null;var PIN_INPUT='';var PINS={};
+try{var ps=localStorage.getItem('caderneta_pins');if(ps)PINS=JSON.parse(ps);}catch(e){}
+
+function savePins(){try{localStorage.setItem('caderneta_pins',JSON.stringify(PINS));}catch(e){}}
+
+function login(name){
+  PIN_USER=name;
+  if(PINS[name]){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('pin-user-name').textContent=name;
+    PIN_INPUT='';updatePinDots();
+    document.getElementById('pin-error').textContent='';
+    document.getElementById('pin-screen').classList.add('show');
+  } else {
+    doLogin(name);
+  }
+}
+
+function doLogin(name){
+  USER=name;
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('pin-screen').classList.remove('show');
+  document.getElementById('app').style.display='block';
+  setTopbar(name);
+  loadCFG().then(function(){goTo('dashboard');}).catch(function(){goTo('dashboard');});
+}
+
+function pinKey(k){
+  if(PIN_INPUT.length>=4)return;
+  PIN_INPUT+=k;
+  updatePinDots();
+  if(PIN_INPUT.length===4){
+    setTimeout(function(){
+      if(PIN_INPUT===PINS[PIN_USER]){
+        doLogin(PIN_USER);
+      } else {
+        document.getElementById('pin-error').textContent='PIN incorreto. Tente novamente.';
+        PIN_INPUT='';
+        updatePinDots();
+        // shake animation
+        var dots=document.getElementById('pin-dots');
+        dots.style.transform='translateX(-8px)';
+        setTimeout(function(){dots.style.transform='translateX(8px)';},100);
+        setTimeout(function(){dots.style.transform='';},200);
+      }
+    },100);
+  }
+}
+function pinDel(){if(PIN_INPUT.length>0){PIN_INPUT=PIN_INPUT.slice(0,-1);updatePinDots();}}
+function updatePinDots(){
+  for(var i=0;i<4;i++){
+    var d=document.getElementById('pd'+i);
+    if(d)d.className='pin-dot'+(i<PIN_INPUT.length?' filled':'');
+  }
+}
+function pinForgot(){
+  document.getElementById('pin-screen').classList.remove('show');
+  document.getElementById('login-screen').style.display='flex';
+  toast('Clique no seu nome para entrar sem PIN','ok');
+  // temporariamente remove o PIN
+  delete PINS[PIN_USER];savePins();
+}
+
+function logout(){
+  closeDrawer();USER=null;
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+}
+function setTopbar(name){var av=document.getElementById('t-av');av.textContent=name==='Maria'?'M':'Mu';av.className='t-av '+name.toLowerCase();document.getElementById('t-name').textContent=name;}
+
+// PIN settings
+function openPinSetup(){
+  document.getElementById('modal-content').innerHTML=
+    '<h3>Configurar PIN</h3>'+
+    '<p style="font-family:\'IM Fell English\',serif;font-style:italic;font-size:13px;color:var(--ink4);margin-bottom:14px">Defina um PIN de 4 dígitos para proteger sua entrada.</p>'+
+    '<div class="field"><label>Novo PIN (4 dígitos)</label><input type="password" id="pin-new" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="••••"></div>'+
+    '<div class="field" style="margin-top:9px"><label>Confirmar PIN</label><input type="password" id="pin-conf" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="••••"></div>'+
+    '<div class="modal-actions"><button class="btn-primary" onclick="savePin()">Salvar PIN</button><button class="btn-secondary" onclick="removePin()">Remover PIN</button></div>';
+  document.getElementById('modal-bg').classList.add('show');
+}
+function savePin(){
+  var p1=document.getElementById('pin-new').value;
+  var p2=document.getElementById('pin-conf').value;
+  if(p1.length!==4||!/^\d{4}$/.test(p1)){toast('PIN deve ter 4 dígitos','err');return;}
+  if(p1!==p2){toast('PINs não coincidem','err');return;}
+  PINS[USER]=p1;savePins();
+  closeModal();toast('PIN configurado!','ok');
+}
+function removePin(){
+  delete PINS[USER];savePins();
+  closeModal();toast('PIN removido','ok');
+}
+
+// ── EXPORTAR CSV ──
+function exportCycle(){
+  var cycle=curCycle();
+  fetchRows(cycle.start,cycle.end).then(function(all){
+    if(!all.length){toast('Nenhum dado para exportar','err');return;}
+    var lines=['Data,Descrição,Categoria,Tipo,Natureza,Valor,Pago por,Recorrente,Observação'];
+    all.forEach(function(t){
+      lines.push([
+        t.date,
+        '"'+(t.description||'').replace(/"/g,'""')+'"',
+        t.category||'',
+        t.type==='expense'?'Despesa':'Receita',
+        t.nature||'conjunto',
+        Number(t.amount).toFixed(2).replace('.',','),
+        t.user_name||'',
+        t.recurring?'Sim':'Não',
+        '"'+(t.obs||'').replace(/"/g,'""')+'"'
+      ].join(','));
+    });
+    var csv=lines.join('\n');
+    var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url;
+    a.download='caderneta_'+cycle.start+'_'+cycle.end+'.csv';
+    document.body.appendChild(a);a.click();
+    document.body.removeChild(a);URL.revokeObjectURL(url);
+    toast('CSV exportado!','ok');
+  }).catch(function(){toast('Erro ao exportar','err');});
+}
 </script>
 </body>
 </html>
