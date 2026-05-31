@@ -366,6 +366,7 @@ var PAGES=['dashboard','lancamento','historico','metas','config'];
 var CFG={m:58,mu:42,cycle_start:1,cycle_name:'',dark:false};
 var CATS=[{name:'Moradia',limit:0},{name:'Alimentação',limit:0},{name:'Transporte',limit:0},{name:'Saúde',limit:0},{name:'Lazer',limit:500},{name:'Educação',limit:0},{name:'Pets',limit:200},{name:'Outros',limit:0}];
 var GOALS=[{id:1,name:'Viagem juntos',target:3000,saved:800,color:'var(--mustard)'},{id:2,name:'Fundo de emergência',target:10000,saved:3200,color:'var(--moss)'}];
+var PAYMENTS=['Crédito Nubank','Crédito C6','Débito Itaú','Pix','Dinheiro'];
 
 // ── UTILS ──
 function fmt(v){return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2});}
@@ -430,6 +431,7 @@ function loadCFG(){
       if(r.key==='dark')CFG.dark=r.value==='1';
       if(r.key==='cats'){try{CATS=JSON.parse(r.value);}catch(e){}}
       if(r.key==='goals'){try{GOALS=JSON.parse(r.value);}catch(e){}}
+      if(r.key==='payments'){try{PAYMENTS=JSON.parse(r.value);}catch(e){}}
     });
     applyTheme();
   }).catch(function(){});
@@ -451,9 +453,6 @@ function fetchRows(start,end,type,user,cat){
   if(cat)f+='&category=eq.'+encodeURIComponent(cat);
   return sbGet('fin_transactions',f).then(function(r){return r||[];});
 }
-
-// ── AUTH ──
-// (funções login, doLogin, logout, setTopbar definidas abaixo junto ao PIN)
 
 // ── NAV ──
 function goTo(page){
@@ -627,7 +626,8 @@ function mkTx(t){
   else if(t.nature==='Maria') natTag='<span class="tag-maria">Maria</span>';
   else if(t.nature==='Murilo') natTag='<span class="tag-murilo">Murilo</span>';
   var obsHtml=t.obs?'<div class="tx-obs">'+t.obs+'</div>':'';
-  return '<div class="tx-item"><div class="tx-icon" style="color:'+(t.type==='income'?'var(--moss)':'var(--terracota)')+'">'+icon+'</div><div class="tx-info"><div class="tx-desc">'+t.description+recTag+natTag+'</div><div class="tx-meta">'+t.category+' · '+t.user_name+' · '+t.date+'</div>'+obsHtml+'</div><div class="tx-amt '+t.type+'">'+(t.type==='expense'?'−':'+')+fmt(t.amount)+'</div>'+(own?'<div class="tx-actions"><button class="tx-btn edit" onclick="openEdit(\''+t.id+'\')" title="Editar">✎</button><button class="tx-btn del" onclick="confirmDel(\''+t.id+'\',\''+t.description.replace(/'/g,'')+'\')">×</button></div>':'<div style="width:44px"></div>')+'</div>';
+  var payHtml=t.payment?'<div class="tx-obs" style="color:var(--moss)">'+t.payment+'</div>':'';
+  return '<div class="tx-item"><div class="tx-icon" style="color:'+(t.type==='income'?'var(--moss)':'var(--terracota)')+'">'+icon+'</div><div class="tx-info"><div class="tx-desc">'+t.description+recTag+natTag+'</div><div class="tx-meta">'+t.category+' · '+t.user_name+' · '+t.date+'</div>'+obsHtml+payHtml+'</div><div class="tx-amt '+t.type+'">'+(t.type==='expense'?'−':'+')+fmt(t.amount)+'</div>'+(own?'<div class="tx-actions"><button class="tx-btn edit" onclick="openEdit(\''+t.id+'\')" title="Editar">✎</button><button class="tx-btn del" onclick="confirmDel(\''+t.id+'\',\''+t.description.replace(/'/g,'')+'\')">×</button></div>':'<div style="width:44px"></div>')+'</div>';
 }
 function confirmDel(id,desc){
   document.getElementById('modal-content').innerHTML=
@@ -656,6 +656,7 @@ function openEdit(id){
       '<div class="field"><label>Data</label><input type="date" id="e-date" value="'+t.date+'"></div>'+
       '<div class="field"><label>Natureza</label><select id="e-nat"><option value="conjunto"'+(nat==='conjunto'?' selected':'')+'>Conjunto</option><option value="Maria"'+(nat==='Maria'?' selected':'')+'>Maria</option><option value="Murilo"'+(nat==='Murilo'?' selected':'')+'>Murilo</option></select></div>'+
       '<div class="field"><label>Pago por</label><select id="e-who"><option value="Maria"'+(who==='Maria'?' selected':'')+'>Maria</option><option value="Murilo"'+(who==='Murilo'?' selected':'')+'>Murilo</option><option value="Conjunto"'+(who==='Conjunto'?' selected':'')+'>Conjunto</option></select></div>'+
+      '<div class="field"><label>Forma de pagamento</label><select id="e-pay">'+PAYMENTS.map(function(p){return '<option value="'+p+'"'+(p===t.payment?' selected':'')+'>'+p+'</option>';}).join('')+'</select></div>'+
       '<div class="field"><label>Observação</label><input type="text" id="e-obs" value="'+(t.obs||'')+'" placeholder="opcional..."></div>'+
       '<div class="modal-actions"><button class="btn-primary" onclick="saveEdit(\''+id+'\')">Salvar</button><button class="btn-secondary" onclick="closeModal()">Cancelar</button></div>';
     document.getElementById('modal-bg').classList.add('show');
@@ -671,6 +672,7 @@ function saveEdit(id){
     date:document.getElementById('e-date').value,
     nature:document.getElementById('e-nat').value,
     user_name:document.getElementById('e-who').value,
+    payment:document.getElementById('e-pay')?document.getElementById('e-pay').value:'',
     obs:document.getElementById('e-obs').value.trim()
   }).then(function(){closeModal();toast('Salvo!','ok');goTo(curPage());}).catch(function(){toast('Erro','err');});
 }
@@ -693,6 +695,7 @@ function renderForm(){
       '<button class="nature-btn" id="nat-murilo" onclick="setNature(\'Murilo\')">Murilo</button>'+
     '</div>'+
     '<div class="field" style="margin-top:10px"><label>Pago por</label><select id="f-user"><option value="'+USER+'" selected>'+USER+'</option><option value="'+(USER==='Maria'?'Murilo':'Maria')+'">'+(USER==='Maria'?'Murilo':'Maria')+'</option><option value="Conjunto">Conjunto</option></select></div>'+
+    '<div class="field" style="margin-top:10px"><label>Forma de pagamento</label><select id="f-pay">'+PAYMENTS.map(function(p){return '<option value="'+p+'">'+p+'</option>';}).join('')+'</select></div>'+
     '<div class="field" style="margin-top:10px"><label>Observação</label><input type="text" id="f-obs" placeholder="Ex: parcelado em 3x, opcional..."></div>'+
     '<label class="recur-row"><input type="checkbox" id="f-recur"> Lançamento recorrente — repete todo ciclo</label>'+
     '<button class="btn-primary" id="btn-save" onclick="submitTx()">Registrar lançamento</button></div>';
@@ -713,9 +716,10 @@ function submitTx(){
   var who=document.getElementById('f-user').value;
   var obs=document.getElementById('f-obs').value.trim();
   var recur=document.getElementById('f-recur').checked;
+  var pay=document.getElementById('f-pay')?document.getElementById('f-pay').value:'';
   if(!desc||!val||val<=0){toast('Preencha descrição e valor','err');return;}
   var btn=document.getElementById('btn-save');btn.disabled=true;btn.textContent='Registrando...';
-  sbPost('fin_transactions',{description:desc,amount:val,category:cat,date:date,month:mon,type:TX_TYPE,user_name:who,nature:TX_NATURE,obs:obs,recurring:recur,created_by:USER}).then(function(){
+  sbPost('fin_transactions',{description:desc,amount:val,category:cat,date:date,month:mon,type:TX_TYPE,user_name:who,nature:TX_NATURE,payment:pay,obs:obs,recurring:recur,created_by:USER}).then(function(){
     btn.textContent='Registrado ✦';btn.className='btn-primary saved';
     setTimeout(function(){renderForm();},900);
   }).catch(function(e){toast('Erro: '+e.message,'err');btn.disabled=false;btn.textContent='Registrar lançamento';});
@@ -728,7 +732,7 @@ function renderHist(){
   var cycleOpts=cycles.map(function(c,i){return '<option value="'+c.start+'|'+c.end+'"'+(i===0?' selected':'')+'>'+c.label+'</option>';}).join('');
   document.getElementById('main').innerHTML=
     '<div class="page-header"><div class="orn-sm">— ✿ —</div><h2><em>Histórico</em></h2><p>Todos os lançamentos por ciclo</p></div>'+
-    '<div class="card"><div class="filter-bar"><select class="fsel" id="fil-cy" onchange="filterH()">'+cycleOpts+'</select><select class="fsel" id="fil-t" onchange="filterH()"><option value="">Todos</option><option value="expense">Despesas</option><option value="income">Receitas</option></select><select class="fsel" id="fil-u" onchange="filterH()"><option value="">Todos</option><option value="Maria">Maria</option><option value="Murilo">Murilo</option></select><select class="fsel" id="fil-nat" onchange="filterH()"><option value="">Natureza</option><option value="conjunto">Conjunto</option><option value="Maria">Individual Maria</option><option value="Murilo">Individual Murilo</option></select><select class="fsel" id="fil-cat" onchange="filterH()"><option value="">Categorias</option>'+catOpts+'</select></div><div id="hist-summary" style="margin-bottom:10px"></div><div id="hist-list"><div class="empty">carregando...</div></div></div>';
+    '<div class="card"><div class="filter-bar"><select class="fsel" id="fil-cy" onchange="filterH()">'+cycleOpts+'</select><select class="fsel" id="fil-t" onchange="filterH()"><option value="">Todos</option><option value="expense">Despesas</option><option value="income">Receitas</option></select><select class="fsel" id="fil-u" onchange="filterH()"><option value="">Todos</option><option value="Maria">Maria</option><option value="Murilo">Murilo</option></select><select class="fsel" id="fil-nat" onchange="filterH()"><option value="">Natureza</option><option value="conjunto">Conjunto</option><option value="Maria">Individual Maria</option><option value="Murilo">Individual Murilo</option></select><select class="fsel" id="fil-pay" onchange="filterH()"><option value="">Pagamento</option>'+PAYMENTS.map(function(p){return '<option value="'+p+'">'+p+'</option>';}).join('')+'</select><select class="fsel" id="fil-cat" onchange="filterH()"><option value="">Categorias</option>'+catOpts+'</select></div><div id="hist-summary" style="margin-bottom:10px"></div><div id="hist-list"><div class="empty">carregando...</div></div></div>';
   filterH();
 }
 function filterH(){
@@ -737,12 +741,14 @@ function filterH(){
   var t=(document.getElementById('fil-t')||{}).value||'';
   var u=(document.getElementById('fil-u')||{}).value||'';
   var nat=(document.getElementById('fil-nat')||{}).value||'';
+  var pay=(document.getElementById('fil-pay')||{}).value||'';
   var cat=(document.getElementById('fil-cat')||{}).value||'';
   var list=document.getElementById('hist-list');
   var sumEl=document.getElementById('hist-summary');
   if(list)list.innerHTML='<div class="empty">carregando...</div>';
   fetchRows(start,end,t,u,cat).then(function(rows){
     if(nat) rows=rows.filter(function(r){return r.nature===nat;});
+    if(pay) rows=rows.filter(function(r){return r.payment===pay;});
     if(!rows.length){if(list)list.innerHTML='<div class="empty">Nenhum lançamento encontrado neste ciclo.</div>';if(sumEl)sumEl.innerHTML='';return;}
     var totExp=rows.filter(function(x){return x.type==='expense';}).reduce(function(s,x){return s+Number(x.amount);},0);
     var totInc=rows.filter(function(x){return x.type==='income';}).reduce(function(s,x){return s+Number(x.amount);},0);
@@ -815,6 +821,7 @@ function openQuickLaunch(){
     '<div class="field" style="margin-bottom:9px"><label>Valor (R$)</label><input type="number" id="q-val" placeholder="0,00" min="0" step="0.01"></div>'+
     '<div class="field" style="margin-bottom:9px"><label>Categoria</label><select id="q-cat">'+catOpts+'</select></div>'+
     '<div class="field" style="margin-bottom:9px"><label>Pago por</label><select id="q-user"><option value="'+USER+'" selected>'+USER+'</option><option value="'+other+'">'+other+'</option><option value="Conjunto">Conjunto</option></select></div>'+
+    '<div class="field" style="margin-bottom:9px"><label>Forma de pagamento</label><select id="q-pay">'+PAYMENTS.map(function(p){return '<option value="'+p+'">'+p+'</option>';}).join('')+'</select></div>'+
     '<div class="modal-actions"><button class="btn-primary" onclick="submitQuick()">Registrar</button><button class="btn-secondary" onclick="closeModal()">Cancelar</button></div>';
   document.getElementById('modal-bg').classList.add('show');
 }
@@ -830,7 +837,6 @@ function suggestCat(val){
   var match=Object.keys(CAT_HINTS).find(function(k){return lower.indexOf(k)>=0;});
   if(match){
     var cat=CAT_HINTS[match];
-    // só sugere se a categoria existir na lista atual
     var exists=CATS.find(function(c){return c.name===cat;});
     if(!exists)return;
     for(var i=0;i<sel.options.length;i++){
@@ -860,6 +866,7 @@ function submitQuick(){
     category:document.getElementById('q-cat').value,
     date:today,month:mon,type:Q_TYPE,
     user_name:document.getElementById('q-user').value,
+    payment:document.getElementById('q-pay')?document.getElementById('q-pay').value:'',
     nature:'conjunto',obs:'',recurring:false,created_by:USER
   }).then(function(){closeModal();toast('Registrado ✦','ok');goTo(curPage());}).catch(function(e){toast('Erro: '+e.message,'err');});
 }
@@ -947,6 +954,17 @@ function renderCfg(){
       '<div class="srow"><div><span class="slabel">Exportar ciclo atual (CSV)</span><div class="sdesc">Abre no Excel, Numbers ou Google Sheets</div></div>'+
       '<button onclick="exportCycle()" style="background:var(--moss-dim);border:1px solid var(--moss);color:var(--moss);padding:6px 12px;border-radius:var(--rs);font-family:\'Crimson Pro\',serif;font-size:13px;cursor:pointer">Exportar</button></div>'+
     '</div>'+
+    '<div class="card"><div class="card-title">Formas de pagamento <small>clique para renomear</small></div>'+
+      '<div class="cat-mgr" id="pay-mgr">'+
+        PAYMENTS.map(function(p,i){
+          return '<div class="cat-row">'+
+            '<input style="background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--ink2);padding:2px 4px;font-size:14px;font-family:\'Crimson Pro\',serif;outline:none;flex:1;min-width:0" value="'+p+'" onblur="renamePay('+i+',this.value)" onkeydown="if(event.key===\'Enter\')this.blur()">'+
+            '<button class="btn-x" onclick="remPay('+i+')">×</button>'+
+          '</div>';
+        }).join('')+
+      '</div>'+
+      '<div class="add-row"><input class="add-input" id="new-pay" placeholder="Ex: Crédito Inter..." onkeydown="if(event.key===\'Enter\')addPay()"><button class="btn-add" onclick="addPay()">+</button></div>'+
+    '</div>'+
     '<div class="card"><div class="card-title">Categorias <small>clique no nome para renomear</small></div>'+
       '<div class="cat-mgr">'+catRows+'</div>'+
       '<div class="add-row"><input class="add-input" id="new-cat" placeholder="Nova categoria..." onkeydown="if(event.key===\'Enter\')addCat()"><button class="btn-add" onclick="addCat()">+</button></div>'+
@@ -961,6 +979,20 @@ function saveCycleConfig(){
   CFG.cycle_start=v;CFG.cycle_name=name;
   saveCFG('cycle_start',v);saveCFG('cycle_name',name);
   toast('Ciclo salvo!','ok');renderCfg();
+}
+function renamePay(i,v){
+  v=v.trim();
+  if(!v){toast('Nome não pode ser vazio','err');renderCfg();return;}
+  var dup=PAYMENTS.findIndex(function(p,idx){return p===v&&idx!==i;});
+  if(dup>=0){toast('Já existe','err');renderCfg();return;}
+  PAYMENTS[i]=v;saveCFG('payments',JSON.stringify(PAYMENTS));toast('Renomeado!','ok');
+}
+function remPay(i){PAYMENTS.splice(i,1);saveCFG('payments',JSON.stringify(PAYMENTS));toast('Removido','ok');renderCfg();}
+function addPay(){
+  var v=document.getElementById('new-pay').value.trim();
+  if(!v)return;
+  if(PAYMENTS.indexOf(v)>=0){toast('Já existe','err');return;}
+  PAYMENTS.push(v);saveCFG('payments',JSON.stringify(PAYMENTS));toast('Adicionado','ok');renderCfg();
 }
 function renameCAT(i,v){
   v=v.trim();
@@ -1015,7 +1047,6 @@ function login(name){
   setTopbar(name);
   loadCFG().then(function(){goTo('dashboard');}).catch(function(){goTo('dashboard');});
 }
-
 function logout(){
   closeDrawer();USER=null;
   document.getElementById('login-screen').style.display='flex';
@@ -1028,7 +1059,7 @@ function exportCycle(){
   var cycle=curCycle();
   fetchRows(cycle.start,cycle.end).then(function(all){
     if(!all.length){toast('Nenhum dado para exportar','err');return;}
-    var lines=['Data,Descrição,Categoria,Tipo,Natureza,Valor,Pago por,Recorrente,Observação'];
+    var lines=['Data,Descrição,Categoria,Tipo,Natureza,Pagamento,Valor,Pago por,Recorrente,Observação'];
     all.forEach(function(t){
       lines.push([
         t.date,
@@ -1036,6 +1067,7 @@ function exportCycle(){
         t.category||'',
         t.type==='expense'?'Despesa':'Receita',
         t.nature||'conjunto',
+        t.payment||'',
         Number(t.amount).toFixed(2).replace('.',','),
         t.user_name||'',
         t.recurring?'Sim':'Não',
