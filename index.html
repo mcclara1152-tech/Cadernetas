@@ -372,7 +372,13 @@ function fmt(v){return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDi
 function fmtS(v){var n=Number(v);if(n>=1000)return 'R$ '+(n/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})+'k';return fmt(v);}
 function fmtDate(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function fmtDateShort(d){return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');}
-function toast(msg,type){var el=document.getElementById('toast');el.textContent=msg;el.className='toast '+(type||'')+' show';setTimeout(function(){el.className='toast';},2200);}
+var toastTimer=null;
+function toast(msg,type){
+  if(toastTimer)clearTimeout(toastTimer);
+  var el=document.getElementById('toast');
+  el.textContent=msg;el.className='toast '+(type||'')+' show';
+  toastTimer=setTimeout(function(){el.className='toast';toastTimer=null;},2200);
+}
 function catNames(){return CATS.map(function(c){return c.name;});}
 function catLimit(name){var c=CATS.find(function(x){return x.name===name;});return c?c.limit:0;}
 function showLoading(){document.getElementById('main').innerHTML='<div class="empty" style="padding:60px">— carregando —</div>';}
@@ -602,11 +608,11 @@ function buildChart(){
 }
 
 function mkTx(t){
-  var own=t.user_name===USER;
+  var own=t.user_name===USER||t.user_name==='Conjunto'||t.created_by===USER;
   var icon=t.type==='income'?'✦':'◆';
-  var recTag=t.recurring?'<span class="tag-recur">recorrente</span>':'';
+  var recTag=t.recurring?'<span class="tag-recur">rec.</span>':'';
   var natTag='';
-  if(t.nature==='conjunto') natTag='<span class="tag-conjunto">conjunto</span>';
+  if(t.nature==='conjunto') natTag='<span class="tag-conjunto">conj.</span>';
   else if(t.nature==='Maria') natTag='<span class="tag-maria">Maria</span>';
   else if(t.nature==='Murilo') natTag='<span class="tag-murilo">Murilo</span>';
   var obsHtml=t.obs?'<div class="tx-obs">'+t.obs+'</div>':'';
@@ -619,7 +625,18 @@ function openEdit(id){
     if(!rows||!rows.length)return;
     var t=rows[0];
     var catOpts=catNames().map(function(c){return '<option value="'+c+'"'+(c===t.category?' selected':'')+'>'+c+'</option>';}).join('');
-    document.getElementById('modal-content').innerHTML='<h3>Editar lançamento</h3><div class="field"><label>Descrição</label><input type="text" id="e-desc" value="'+t.description+'"></div><div class="field"><label>Valor (R$)</label><input type="number" id="e-val" value="'+t.amount+'" step="0.01" min="0"></div><div class="field"><label>Categoria</label><select id="e-cat">'+catOpts+'</select></div><div class="field"><label>Data</label><input type="date" id="e-date" value="'+t.date+'"></div><div class="field"><label>Observação</label><input type="text" id="e-obs" value="'+(t.obs||'')+'" placeholder="opcional..."></div><div class="modal-actions"><button class="btn-primary" onclick="saveEdit(\''+id+'\')">Salvar</button><button class="btn-secondary" onclick="closeModal()">Cancelar</button></div>';
+    var nat=t.nature||'conjunto';
+    var who=t.user_name||USER;
+    document.getElementById('modal-content').innerHTML=
+      '<h3>Editar lançamento</h3>'+
+      '<div class="field"><label>Descrição</label><input type="text" id="e-desc" value="'+t.description+'"></div>'+
+      '<div class="field"><label>Valor (R$)</label><input type="number" id="e-val" value="'+t.amount+'" step="0.01" min="0"></div>'+
+      '<div class="field"><label>Categoria</label><select id="e-cat">'+catOpts+'</select></div>'+
+      '<div class="field"><label>Data</label><input type="date" id="e-date" value="'+t.date+'"></div>'+
+      '<div class="field"><label>Natureza</label><select id="e-nat"><option value="conjunto"'+(nat==='conjunto'?' selected':'')+'>Conjunto</option><option value="Maria"'+(nat==='Maria'?' selected':'')+'>Maria</option><option value="Murilo"'+(nat==='Murilo'?' selected':'')+'>Murilo</option></select></div>'+
+      '<div class="field"><label>Pago por</label><select id="e-who"><option value="Maria"'+(who==='Maria'?' selected':'')+'>Maria</option><option value="Murilo"'+(who==='Murilo'?' selected':'')+'>Murilo</option><option value="Conjunto"'+(who==='Conjunto'?' selected':'')+'>Conjunto</option></select></div>'+
+      '<div class="field"><label>Observação</label><input type="text" id="e-obs" value="'+(t.obs||'')+'" placeholder="opcional..."></div>'+
+      '<div class="modal-actions"><button class="btn-primary" onclick="saveEdit(\''+id+'\')">Salvar</button><button class="btn-secondary" onclick="closeModal()">Cancelar</button></div>';
     document.getElementById('modal-bg').classList.add('show');
   });
 }
@@ -627,7 +644,14 @@ function saveEdit(id){
   var desc=document.getElementById('e-desc').value.trim();
   var val=parseFloat(document.getElementById('e-val').value);
   if(!desc||!val||val<=0){toast('Preencha corretamente','err');return;}
-  sbPatch('fin_transactions',id,{description:desc,amount:val,category:document.getElementById('e-cat').value,date:document.getElementById('e-date').value,obs:document.getElementById('e-obs').value.trim()}).then(function(){closeModal();toast('Salvo!','ok');goTo(curPage());}).catch(function(){toast('Erro','err');});
+  sbPatch('fin_transactions',id,{
+    description:desc,amount:val,
+    category:document.getElementById('e-cat').value,
+    date:document.getElementById('e-date').value,
+    nature:document.getElementById('e-nat').value,
+    user_name:document.getElementById('e-who').value,
+    obs:document.getElementById('e-obs').value.trim()
+  }).then(function(){closeModal();toast('Salvo!','ok');goTo(curPage());}).catch(function(){toast('Erro','err');});
 }
 function closeModal(){document.getElementById('modal-bg').classList.remove('show');}
 
@@ -832,8 +856,8 @@ function openDrawer(){
     var myExp=all.filter(function(t){return t.user_name===USER&&t.type==='expense';}).reduce(function(s,t){return s+Number(t.amount);},0);
     var myInc=all.filter(function(t){return t.user_name===USER&&t.type==='income';}).reduce(function(s,t){return s+Number(t.amount);},0);
     var myBal=myInc-myExp;
-    var totExp=all.filter(function(t){return t.type==='expense';}).reduce(function(s,t){return s+Number(t.amount);},0);
-    var ideal=totExp*(USER==='Maria'?CFG.m:CFG.mu)/100;var diff=myExp-ideal;
+    var totExpIndiv=all.filter(function(t){return t.type==='expense'&&t.user_name!=='Conjunto';}).reduce(function(s,t){return s+Number(t.amount);},0);
+    var ideal=totExpIndiv*(USER==='Maria'?CFG.m:CFG.mu)/100;var diff=myExp-ideal;
     var cnt=all.filter(function(t){return t.user_name===USER;}).length;
     var cmap={};all.filter(function(t){return t.user_name===USER&&t.type==='expense';}).forEach(function(t){cmap[t.category]=(cmap[t.category]||0)+Number(t.amount);});
     var top=Object.keys(cmap).sort(function(a,b){return cmap[b]-cmap[a];})[0];
@@ -849,13 +873,11 @@ function openDrawer(){
 }
 function closeDrawer(){document.getElementById('overlay').classList.remove('show');document.getElementById('drawer').classList.remove('show');}
 function ds(lbl,val,cls){return '<div class="dstat"><span class="dstat-lbl">'+lbl+'</span><span class="dstat-val '+cls+'">'+val+'</span></div>';}
-function switchUser(name){closeDrawer();USER=name;setTopbar(name);toast('Bem-vinda, '+name+'!','ok');goTo('dashboard');}
+function switchUser(name){closeDrawer();USER=name;setTopbar(name);toast('Bem-vind'+(name==='Maria'?'a':'o')+', '+name+'!','ok');goTo('dashboard');}
 
 document.getElementById('modal-bg').addEventListener('click',function(e){if(e.target===this)closeModal();});
 
-// ── PIN ──
-// ── PIN ──
-// (removido — login direto por nome)
+// ── AUTH ──
 
 function login(name){
   USER=name;
