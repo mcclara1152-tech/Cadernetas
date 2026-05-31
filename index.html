@@ -341,7 +341,7 @@ body{background:var(--cream);color:var(--ink);font-family:'Crimson Pro',Georgia,
     <button class="nav-btn" onclick="goTo('config')">Configurações</button>
   </div>
   <div class="main" id="main"></div>
-  <button class="fab" onclick="goTo('lancamento')" title="Lançar">+</button>
+  <button class="fab" onclick="openQuickLaunch()" title="Lançar">+</button>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -392,7 +392,9 @@ function curCycle(){
   var startDate,endDate;
   if(day>=s){startDate=new Date(d.getFullYear(),d.getMonth(),s);endDate=new Date(d.getFullYear(),d.getMonth()+1,s-1);}
   else{startDate=new Date(d.getFullYear(),d.getMonth()-1,s);endDate=new Date(d.getFullYear(),d.getMonth(),s-1);}
-  return{start:fmtDate(startDate),end:fmtDate(endDate),label:fmtDateShort(startDate)+' → '+fmtDateShort(endDate),daysLeft:Math.ceil((endDate-new Date())/(1000*60*60*24))+1};
+  var now=new Date();now.setHours(0,0,0,0);
+  var daysLeft=Math.max(0,Math.ceil((endDate-now)/(1000*60*60*24)));
+  return{start:fmtDate(startDate),end:fmtDate(endDate),label:fmtDateShort(startDate)+' → '+fmtDateShort(endDate),daysLeft:daysLeft};
 }
 function lastCycles(n){
   var cycles=[];var d=new Date();var s=CFG.cycle_start||1;
@@ -469,8 +471,10 @@ function curPage(){var btns=document.querySelectorAll('.nav-btn');for(var i=0;i<
 function renderDash(){
   var cycle=curCycle();
   var alertHtml='';
-  if(cycle.daysLeft<=3&&cycle.daysLeft>0){
-    alertHtml='<div class="cycle-alert">⏳ O ciclo termina em '+cycle.daysLeft+' dia'+(cycle.daysLeft>1?'s':'')+'. Hora de fechar as contas!</div>';
+  if(cycle.daysLeft<=3){
+    var msg=cycle.daysLeft===0?'⏳ Hoje é o último dia do ciclo. Hora de fechar as contas!':
+            '⏳ O ciclo termina em '+cycle.daysLeft+' dia'+(cycle.daysLeft>1?'s':'')+'. Hora de fechar as contas!';
+    alertHtml='<div class="cycle-alert">'+msg+'</div>';
   }
   fetchRows(cycle.start,cycle.end).then(function(all){
     var exp=all.filter(function(t){return t.type==='expense';});
@@ -526,7 +530,7 @@ function renderDash(){
     var cycleName=CFG.cycle_name?'<em> — '+CFG.cycle_name+'</em>':'';
     document.getElementById('main').innerHTML=
       alertHtml+
-      '<div class="page-header"><div class="orn-sm">— ✿ —</div><h2>Ciclo <em>'+cycle.label+'</em>'+cycleName+'</h2><p>'+cycle.daysLeft+' dias restantes · <span style="cursor:pointer;text-decoration:underline;color:var(--mustard)" onclick="exportCycle()">exportar ciclo</span></p></div>'+
+      '<div class="page-header"><div class="orn-sm">— ✿ —</div><h2>Ciclo <em>'+cycle.label+'</em>'+cycleName+'</h2><p>'+(cycle.daysLeft===0?'Último dia do ciclo':cycle.daysLeft+' dias restantes')+' · <span style="cursor:pointer;text-decoration:underline;color:var(--mustard)" onclick="exportCycle()">exportar ciclo</span></p></div>'+
       '<div class="sum-grid">'+
         '<div class="sum-tile green"><div class="sum-label">Receitas</div><div class="sum-val green">'+fmtS(totInc)+'</div><div class="sum-sub">'+inc.length+' lançamentos</div></div>'+
         '<div class="sum-tile red"><div class="sum-label">Despesas</div><div class="sum-val red">'+fmtS(totExp)+'</div><div class="sum-sub">'+exp.length+' lançamentos</div></div>'+
@@ -550,7 +554,14 @@ function renderDash(){
       '<div class="card"><div class="card-title">Evolução dos saldos <small>últimos 3 ciclos</small></div><div id="chart-slot"></div></div>'+
       noteHtml+
       '<div class="card"><div class="card-title">Vs. ciclo anterior <small>por categoria</small></div><div id="compare-slot"><div class="empty" style="padding:12px">carregando...</div></div></div>'+
-      (all.length?'<div class="card"><div class="card-title">Lançamentos recentes</div><div class="tx-list">'+all.slice(0,8).map(mkTx).join('')+'</div></div>':'<div class="empty">Nenhum lançamento neste ciclo.</div>');
+      (all.length?
+        '<div class="card"><div class="card-title">Lançamentos recentes</div><div class="tx-list">'+all.slice(0,8).map(mkTx).join('')+'</div></div>':
+        '<div class="card" style="text-align:center;padding:32px 20px">'+
+          '<div style="font-size:32px;margin-bottom:12px">✦</div>'+
+          '<div style="font-family:\'Playfair Display\',serif;font-size:18px;font-weight:700;margin-bottom:8px">Nenhum lançamento ainda</div>'+
+          '<div style="font-family:\'IM Fell English\',serif;font-style:italic;font-size:14px;color:var(--ink4);margin-bottom:20px">Comece registrando o primeiro gasto ou receita do ciclo</div>'+
+          '<button class="btn-primary" style="max-width:240px;margin:0 auto" onclick="goTo(\'lancamento\')">Registrar primeiro lançamento</button>'+
+        '</div>');
 
     buildChart();
     loadCycleNote(noteKey);
@@ -616,9 +627,19 @@ function mkTx(t){
   else if(t.nature==='Maria') natTag='<span class="tag-maria">Maria</span>';
   else if(t.nature==='Murilo') natTag='<span class="tag-murilo">Murilo</span>';
   var obsHtml=t.obs?'<div class="tx-obs">'+t.obs+'</div>':'';
-  return '<div class="tx-item"><div class="tx-icon" style="color:'+(t.type==='income'?'var(--moss)':'var(--terracota)')+'">'+icon+'</div><div class="tx-info"><div class="tx-desc">'+t.description+recTag+natTag+'</div><div class="tx-meta">'+t.category+' · '+t.user_name+' · '+t.date+'</div>'+obsHtml+'</div><div class="tx-amt '+t.type+'">'+(t.type==='expense'?'−':'+')+fmt(t.amount)+'</div>'+(own?'<div class="tx-actions"><button class="tx-btn edit" onclick="openEdit(\''+t.id+'\')" title="Editar">✎</button><button class="tx-btn del" onclick="delTx(\''+t.id+'\')" title="Deletar">×</button></div>':'<div style="width:44px"></div>')+'</div>';
+  return '<div class="tx-item"><div class="tx-icon" style="color:'+(t.type==='income'?'var(--moss)':'var(--terracota)')+'">'+icon+'</div><div class="tx-info"><div class="tx-desc">'+t.description+recTag+natTag+'</div><div class="tx-meta">'+t.category+' · '+t.user_name+' · '+t.date+'</div>'+obsHtml+'</div><div class="tx-amt '+t.type+'">'+(t.type==='expense'?'−':'+')+fmt(t.amount)+'</div>'+(own?'<div class="tx-actions"><button class="tx-btn edit" onclick="openEdit(\''+t.id+'\')" title="Editar">✎</button><button class="tx-btn del" onclick="confirmDel(\''+t.id+'\',\''+t.description.replace(/'/g,'')+'\')">×</button></div>':'<div style="width:44px"></div>')+'</div>';
 }
-function delTx(id){sbDel('fin_transactions',id).then(function(){toast('Removido','ok');goTo(curPage());}).catch(function(){toast('Erro','err');});}
+function confirmDel(id,desc){
+  document.getElementById('modal-content').innerHTML=
+    '<h3>Remover lançamento</h3>'+
+    '<p style="font-family:\'IM Fell English\',serif;font-style:italic;font-size:14px;color:var(--ink3);margin-bottom:18px">Tem certeza que deseja remover <strong>'+desc+'</strong>? Esta ação não pode ser desfeita.</p>'+
+    '<div class="modal-actions">'+
+      '<button class="btn-primary" style="background:var(--terracota)" onclick="delTx(\''+id+'\')">Remover</button>'+
+      '<button class="btn-secondary" onclick="closeModal()">Cancelar</button>'+
+    '</div>';
+  document.getElementById('modal-bg').classList.add('show');
+}
+function delTx(id){closeModal();sbDel('fin_transactions',id).then(function(){toast('Removido','ok');goTo(curPage());}).catch(function(){toast('Erro','err');});}
 
 function openEdit(id){
   sbGet('fin_transactions','?id=eq.'+id).then(function(rows){
@@ -664,7 +685,7 @@ function renderForm(){
   document.getElementById('main').innerHTML=
     '<div class="page-header"><div class="orn-sm">— ✿ —</div><h2>Novo <em>Lançamento</em></h2><p>Ciclo atual: '+cycle.label+'</p></div>'+
     '<div class="card"><div class="type-toggle"><button class="type-btn exp" id="btn-exp" onclick="setType(\'expense\')">↓ Despesa</button><button class="type-btn" id="btn-inc" onclick="setType(\'income\')">↑ Receita</button></div>'+
-    '<div class="form-grid"><div class="field"><label>Descrição</label><input type="text" id="f-desc" placeholder="Ex: Mercado, Aluguel..."></div><div class="field"><label>Valor (R$)</label><input type="number" id="f-val" placeholder="0,00" min="0" step="0.01"></div><div class="field"><label>Categoria</label><select id="f-cat">'+catOpts+'</select></div><div class="field"><label>Data</label><input type="date" id="f-date" value="'+today+'"></div></div>'+
+    '<div class="form-grid"><div class="field"><label>Descrição</label><input type="text" id="f-desc" placeholder="Ex: Mercado, Aluguel..." oninput="suggestCat(this.value)"></div><div class="field"><label>Valor (R$)</label><input type="number" id="f-val" placeholder="0,00" min="0" step="0.01"></div><div class="field"><label>Categoria</label><select id="f-cat">'+catOpts+'</select></div><div class="field"><label>Data</label><input type="date" id="f-date" value="'+today+'"></div></div>'+
     '<div class="field" style="margin-top:10px"><label>Natureza do gasto</label></div>'+
     '<div class="nature-toggle">'+
       '<button class="nature-btn sel-conjunto" id="nat-conjunto" onclick="setNature(\'conjunto\')">Conjunto</button>'+
@@ -726,7 +747,16 @@ function filterH(){
     var totExp=rows.filter(function(x){return x.type==='expense';}).reduce(function(s,x){return s+Number(x.amount);},0);
     var totInc=rows.filter(function(x){return x.type==='income';}).reduce(function(s,x){return s+Number(x.amount);},0);
     var bal=totInc-totExp;
-    if(sumEl)sumEl.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap"><div class="sum-tile green" style="flex:1;min-width:80px"><div class="sum-label">Receitas</div><div class="sum-val green" style="font-size:15px">'+fmtS(totInc)+'</div></div><div class="sum-tile red" style="flex:1;min-width:80px"><div class="sum-label">Despesas</div><div class="sum-val red" style="font-size:15px">'+fmtS(totExp)+'</div></div><div class="sum-tile '+(bal>=0?'green':'red')+'" style="flex:1;min-width:80px"><div class="sum-label">Saldo</div><div class="sum-val '+(bal>=0?'green':'red')+'" style="font-size:15px">'+(bal>=0?'+':'')+fmtS(bal)+'</div></div></div>';
+    var extraHtml='';
+    if(u){
+      var indExp=rows.filter(function(x){return x.type==='expense'&&x.nature===u;}).reduce(function(s,x){return s+Number(x.amount);},0);
+      var conjExp=rows.filter(function(x){return x.type==='expense'&&x.nature==='conjunto';}).reduce(function(s,x){return s+Number(x.amount);},0);
+      extraHtml='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'+
+        '<div class="sum-tile rose" style="flex:1;min-width:80px"><div class="sum-label">Individual</div><div class="sum-val rose" style="font-size:13px">'+fmtS(indExp)+'</div></div>'+
+        '<div class="sum-tile gold" style="flex:1;min-width:80px"><div class="sum-label">Conjunto</div><div class="sum-val gold" style="font-size:13px">'+fmtS(conjExp)+'</div></div>'+
+      '</div>';
+    }
+    if(sumEl)sumEl.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap"><div class="sum-tile green" style="flex:1;min-width:80px"><div class="sum-label">Receitas</div><div class="sum-val green" style="font-size:15px">'+fmtS(totInc)+'</div></div><div class="sum-tile red" style="flex:1;min-width:80px"><div class="sum-label">Despesas</div><div class="sum-val red" style="font-size:15px">'+fmtS(totExp)+'</div></div><div class="sum-tile '+(bal>=0?'green':'red')+'" style="flex:1;min-width:80px"><div class="sum-label">Saldo</div><div class="sum-val '+(bal>=0?'green':'red')+'" style="font-size:15px">'+(bal>=0?'+':'')+fmtS(bal)+'</div></div></div>'+extraHtml;
     if(list)list.innerHTML='<div class="tx-list">'+rows.map(mkTx).join('')+'</div><div class="hist-summary"><span>'+rows.length+' lançamentos</span><span style="color:'+(bal>=0?'var(--moss)':'var(--terracota)')+'\">'+(bal>=0?'+':'')+fmt(bal)+'</span></div>';
   }).catch(function(e){if(list)list.innerHTML='<div style="color:var(--terracota);font-size:14px">Erro: '+e.message+'</div>';});
 }
@@ -753,9 +783,109 @@ function buildComparativo(){
   }).catch(function(){});
 }
 
-// ── METAS ──
+// Sugestão de categoria por palavras-chave
+var CAT_HINTS={
+  'mercado':'Alimentação','supermercado':'Alimentação','padaria':'Alimentação','restaurante':'Alimentação',
+  'ifood':'Alimentação','lanche':'Alimentação','pizza':'Alimentação','açougue':'Alimentação',
+  'aluguel':'Moradia','energia':'Moradia','luz':'Moradia','água':'Moradia','condomínio':'Moradia','internet':'Moradia',
+  'uber':'Transporte','gasolina':'Transporte','combustível':'Transporte','posto':'Transporte','ônibus':'Transporte',
+  'moto':'Transporte','carro':'Transporte',
+  'academia':'Saúde','farmácia':'Saúde','médico':'Saúde','consulta':'Saúde','dentista':'Saúde','remédio':'Saúde',
+  'suplemento':'Saúde',
+  'cinema':'Lazer','netflix':'Lazer','spotify':'Lazer','show':'Lazer','viagem':'Lazer','bar':'Lazer',
+  'cabelo':'Saúde','salão':'Saúde','unhas':'Saúde','barbearia':'Saúde',
+  'roupa':'Vestuário','calçado':'Vestuário','tênis':'Vestuário','sapato':'Vestuário',
+  'escola':'Educação','curso':'Educação','livro':'Educação','faculdade':'Educação',
+  'cornélio':'Pets','ração':'Pets','veterinário':'Pets','petshop':'Pets',
+  'salário':'Outros','freelance':'Outros','icloud':'Outros'
+};
+// Modal rápido de lançamento (FAB)
+function openQuickLaunch(){
+  Q_TYPE='expense';
+  var catOpts=catNames().map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
+  var today=new Date().toISOString().split('T')[0];
+  var other=USER==='Maria'?'Murilo':'Maria';
+  document.getElementById('modal-content').innerHTML=
+    '<h3>Lançamento rápido</h3>'+
+    '<div class="type-toggle" style="margin-bottom:12px">'+
+      '<button class="type-btn exp" id="q-btn-exp" onclick="setQType(\'expense\')">↓ Despesa</button>'+
+      '<button class="type-btn" id="q-btn-inc" onclick="setQType(\'income\')">↑ Receita</button>'+
+    '</div>'+
+    '<div class="field" style="margin-bottom:9px"><label>Descrição</label><input type="text" id="q-desc" placeholder="Ex: Mercado..." oninput="suggestQCat(this.value)"></div>'+
+    '<div class="field" style="margin-bottom:9px"><label>Valor (R$)</label><input type="number" id="q-val" placeholder="0,00" min="0" step="0.01"></div>'+
+    '<div class="field" style="margin-bottom:9px"><label>Categoria</label><select id="q-cat">'+catOpts+'</select></div>'+
+    '<div class="field" style="margin-bottom:9px"><label>Pago por</label><select id="q-user"><option value="'+USER+'" selected>'+USER+'</option><option value="'+other+'">'+other+'</option><option value="Conjunto">Conjunto</option></select></div>'+
+    '<div class="modal-actions"><button class="btn-primary" onclick="submitQuick()">Registrar</button><button class="btn-secondary" onclick="closeModal()">Cancelar</button></div>';
+  document.getElementById('modal-bg').classList.add('show');
+}
+var Q_TYPE='expense';
+function setQType(t){
+  Q_TYPE=t;
+  document.getElementById('q-btn-exp').className='type-btn'+(t==='expense'?' exp':'');
+  document.getElementById('q-btn-inc').className='type-btn'+(t==='income'?' inc':'');
+}
+function suggestCat(val){
+  var sel=document.getElementById('f-cat');if(!sel)return;
+  var lower=val.toLowerCase();
+  var match=Object.keys(CAT_HINTS).find(function(k){return lower.indexOf(k)>=0;});
+  if(match){
+    var cat=CAT_HINTS[match];
+    // só sugere se a categoria existir na lista atual
+    var exists=CATS.find(function(c){return c.name===cat;});
+    if(!exists)return;
+    for(var i=0;i<sel.options.length;i++){
+      if(sel.options[i].value===cat){sel.selectedIndex=i;break;}
+    }
+  }
+}
+function suggestQCat(val){
+  var sel=document.getElementById('q-cat');if(!sel)return;
+  var lower=val.toLowerCase();
+  var match=Object.keys(CAT_HINTS).find(function(k){return lower.indexOf(k)>=0;});
+  if(match){
+    var cat=CAT_HINTS[match];
+    var exists=CATS.find(function(c){return c.name===cat;});
+    if(!exists)return;
+    for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===cat){sel.selectedIndex=i;break;}}
+  }
+}
+function submitQuick(){
+  var desc=document.getElementById('q-desc').value.trim();
+  var val=parseFloat(document.getElementById('q-val').value);
+  if(!desc||!val||val<=0){toast('Preencha descrição e valor','err');return;}
+  var today=new Date().toISOString().split('T')[0];
+  var mon=today.substring(0,7);
+  sbPost('fin_transactions',{
+    description:desc,amount:val,
+    category:document.getElementById('q-cat').value,
+    date:today,month:mon,type:Q_TYPE,
+    user_name:document.getElementById('q-user').value,
+    nature:'conjunto',obs:'',recurring:false,created_by:USER
+  }).then(function(){closeModal();toast('Registrado ✦','ok');goTo(curPage());}).catch(function(e){toast('Erro: '+e.message,'err');});
+}
+
+// Editar meta
+function openEditGoal(id){
+  var g=GOALS.find(function(x){return x.id===id;});if(!g)return;
+  document.getElementById('modal-content').innerHTML=
+    '<h3>Editar meta</h3>'+
+    '<div class="field"><label>Nome</label><input type="text" id="eg-name" value="'+g.name+'"></div>'+
+    '<div class="field" style="margin-top:9px"><label>Valor alvo (R$)</label><input type="number" id="eg-target" value="'+g.target+'" step="0.01" min="0"></div>'+
+    '<div class="field" style="margin-top:9px"><label>Já guardado (R$)</label><input type="number" id="eg-saved" value="'+g.saved+'" step="0.01" min="0"></div>'+
+    '<div class="modal-actions"><button class="btn-primary" onclick="saveEditGoal('+id+')">Salvar</button><button class="btn-secondary" onclick="closeModal()">Cancelar</button></div>';
+  document.getElementById('modal-bg').classList.add('show');
+}
+function saveEditGoal(id){
+  var name=document.getElementById('eg-name').value.trim();
+  var target=parseFloat(document.getElementById('eg-target').value);
+  var saved=parseFloat(document.getElementById('eg-saved').value)||0;
+  if(!name||!target||target<=0){toast('Preencha nome e valor','err');return;}
+  var g=GOALS.find(function(x){return x.id===id;});
+  if(g){g.name=name;g.target=target;g.saved=saved;}
+  saveCFG('goals',JSON.stringify(GOALS));closeModal();toast('Meta atualizada!','ok');renderMetas();
+}
 function renderMetas(){
-  var html=GOALS.length?GOALS.map(function(g){var pct=Math.min(100,Math.round(g.saved/g.target*100));return '<div class="goal-item"><div class="goal-head"><div><div class="goal-name">'+g.name+'</div><div class="goal-target">Meta: '+fmt(g.target)+'</div></div><span class="goal-pct" style="color:'+g.color+'">'+pct+'%</span></div><div class="goal-bar-wrap"><div class="goal-bar-fill" style="width:'+pct+'%;background:'+g.color+'"></div></div><div class="goal-meta"><span style="color:var(--moss)">'+fmt(g.saved)+' guardados</span><span>faltam '+fmt(Math.max(0,g.target-g.saved))+'</span></div><div class="goal-actions"><button class="btn-goal" onclick="openContrib('+g.id+')">+ Contribuir</button><button class="btn-goal del" onclick="removeGoal('+g.id+')">Remover</button></div></div>';}).join(''):'<div class="empty">Nenhuma meta cadastrada ainda.</div>';
+  var html=GOALS.length?GOALS.map(function(g){var pct=Math.min(100,Math.round(g.saved/g.target*100));return '<div class="goal-item"><div class="goal-head"><div><div class="goal-name">'+g.name+'</div><div class="goal-target">Meta: '+fmt(g.target)+'</div></div><span class="goal-pct" style="color:'+g.color+'">'+pct+'%</span></div><div class="goal-bar-wrap"><div class="goal-bar-fill" style="width:'+pct+'%;background:'+g.color+'"></div></div><div class="goal-meta"><span style="color:var(--moss)">'+fmt(g.saved)+' guardados</span><span>faltam '+fmt(Math.max(0,g.target-g.saved))+'</span></div><div class="goal-actions"><button class="btn-goal" onclick="openContrib('+g.id+')">+ Contribuir</button><button class="btn-goal" onclick="openEditGoal('+g.id+')">✎ Editar</button><button class="btn-goal del" onclick="removeGoal('+g.id+')">Remover</button></div></div>';}).join(''):'<div class="empty">Nenhuma meta cadastrada ainda.</div>';
   document.getElementById('main').innerHTML=
     '<div class="page-header"><div class="orn-sm">— ✿ —</div><h2><em>Metas</em> do Casal</h2><p>Objetivos financeiros compartilhados</p></div>'+
     '<div class="card"><div class="goal-list">'+html+'</div><button class="btn-primary" style="margin-top:14px" onclick="openNewGoal()">✦ Nova meta</button></div>';
@@ -878,7 +1008,6 @@ function switchUser(name){closeDrawer();USER=name;setTopbar(name);toast('Bem-vin
 document.getElementById('modal-bg').addEventListener('click',function(e){if(e.target===this)closeModal();});
 
 // ── AUTH ──
-
 function login(name){
   USER=name;
   document.getElementById('login-screen').style.display='none';
