@@ -162,7 +162,9 @@ body{background:var(--cream);color:var(--ink);font-family:'Crimson Pro',Georgia,
 .tx-btn:hover{background:var(--cream);}
 .tx-btn.del:hover{color:var(--terracota);}
 .tx-btn.edit:hover{color:var(--mustard);}
-.tag-recur{font-size:9px;padding:1px 5px;border-radius:10px;background:var(--rose-dim);color:var(--rose);border:1px solid var(--rose);margin-left:4px;vertical-align:middle;letter-spacing:1px;text-transform:uppercase;}
+.tx-paid{width:22px;height:22px;border-radius:50%;border:2px solid var(--border2);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;color:transparent;transition:all .2s;flex-shrink:0;}
+.tx-paid.paid{background:var(--moss);border-color:var(--moss);color:var(--paper);}
+.tx-paid:hover{border-color:var(--moss);}padding:1px 5px;border-radius:10px;background:var(--rose-dim);color:var(--rose);border:1px solid var(--rose);margin-left:4px;vertical-align:middle;letter-spacing:1px;text-transform:uppercase;}
 .tag-conjunto{font-size:9px;padding:1px 5px;border-radius:10px;background:var(--mustard-dim);color:var(--mustard);border:1px solid var(--mustard);margin-left:4px;vertical-align:middle;letter-spacing:1px;text-transform:uppercase;}
 .tag-maria{font-size:9px;padding:1px 5px;border-radius:10px;background:var(--terracota-dim);color:var(--terracota);border:1px solid var(--terracota);margin-left:4px;vertical-align:middle;letter-spacing:1px;text-transform:uppercase;}
 .tag-murilo{font-size:9px;padding:1px 5px;border-radius:10px;background:var(--moss-dim);color:var(--moss);border:1px solid var(--moss);margin-left:4px;vertical-align:middle;letter-spacing:1px;text-transform:uppercase;}
@@ -481,6 +483,10 @@ function renderDash(){
     var totExp=exp.reduce(function(s,t){return s+Number(t.amount);},0);
     var totInc=inc.reduce(function(s,t){return s+Number(t.amount);},0);
     var bal=totInc-totExp;
+    var paidExp=exp.filter(function(t){return t.paid===true||t.paid==='true';}).reduce(function(s,t){return s+Number(t.amount);},0);
+    var paidInc=inc.filter(function(t){return t.paid===true||t.paid==='true';}).reduce(function(s,t){return s+Number(t.amount);},0);
+    var realBal=paidInc-paidExp;
+    var pendExp=totExp-paidExp;
     var mExp=exp.filter(function(t){return t.user_name==='Maria';}).reduce(function(s,t){return s+Number(t.amount);},0);
     var muExp=exp.filter(function(t){return t.user_name==='Murilo';}).reduce(function(s,t){return s+Number(t.amount);},0);
     var myExp=exp.filter(function(t){return t.user_name===USER;}).reduce(function(s,t){return s+Number(t.amount);},0);
@@ -533,8 +539,8 @@ function renderDash(){
       '<div class="sum-grid">'+
         '<div class="sum-tile green"><div class="sum-label">Receitas</div><div class="sum-val green">'+fmtS(totInc)+'</div><div class="sum-sub">'+inc.length+' lançamentos</div></div>'+
         '<div class="sum-tile red"><div class="sum-label">Despesas</div><div class="sum-val red">'+fmtS(totExp)+'</div><div class="sum-sub">'+exp.length+' lançamentos</div></div>'+
-        '<div class="sum-tile '+(bal>=0?'green':'red')+'"><div class="sum-label">Saldo atual</div><div class="sum-val '+(bal>=0?'green':'red')+'">'+fmtS(Math.abs(bal))+'</div><div class="sum-sub">'+(bal>=0?'positivo':'negativo')+'</div></div>'+
-        '<div class="sum-tile rose"><div class="sum-label">Seus gastos</div><div class="sum-val rose">'+fmtS(myExp)+'</div><div class="sum-sub">'+USER+'</div></div>'+
+        '<div class="sum-tile '+(realBal>=0?'green':'red')+'"><div class="sum-label">Saldo real</div><div class="sum-val '+(realBal>=0?'green':'red')+'">'+(realBal>=0?'+':'')+fmtS(realBal)+'</div><div class="sum-sub">só pagos</div></div>'+
+        '<div class="sum-tile gold"><div class="sum-label">Pendente</div><div class="sum-val gold">'+fmtS(pendExp)+'</div><div class="sum-sub">a pagar</div></div>'+
       '</div>'+
       '<div class="card"><div class="card-title">Divisão do casal <small>'+CFG.m+'% · '+CFG.mu+'%</small></div>'+
         '<div class="bal-box"><div class="bal-label">Maria vs. Murilo — pagamentos individuais</div>'+
@@ -627,7 +633,41 @@ function mkTx(t){
   else if(t.nature==='Murilo') natTag='<span class="tag-murilo">Murilo</span>';
   var obsHtml=t.obs?'<div class="tx-obs">'+t.obs+'</div>':'';
   var payHtml=t.payment?'<div class="tx-obs" style="color:var(--moss)">'+t.payment+'</div>':'';
-  return '<div class="tx-item"><div class="tx-icon" style="color:'+(t.type==='income'?'var(--moss)':'var(--terracota)')+'">'+icon+'</div><div class="tx-info"><div class="tx-desc">'+t.description+recTag+natTag+'</div><div class="tx-meta">'+t.category+' · '+t.user_name+' · '+t.date+'</div>'+obsHtml+payHtml+'</div><div class="tx-amt '+t.type+'">'+(t.type==='expense'?'−':'+')+fmt(t.amount)+'</div>'+(own?'<div class="tx-actions"><button class="tx-btn edit" onclick="openEdit(\''+t.id+'\')" title="Editar">✎</button><button class="tx-btn del" onclick="confirmDel(\''+t.id+'\',\''+t.description.replace(/'/g,'')+'\')">×</button></div>':'<div style="width:44px"></div>')+'</div>';
+  var paid=isPaid(t);
+  var paidBtn='<button class="tx-paid'+(paid?' paid':'')+'" id="paid-'+t.id+'" onclick="togglePaid(\''+t.id+'\','+paid+')" title="'+(paid?'Marcar como pendente':'Marcar como pago')+'">'+(paid?'✓':'')+'</button>';
+  return '<div class="tx-item" style="opacity:'+(paid?'1':'.85')+'">'
+    +paidBtn
+    +'<div class="tx-icon" style="color:'+(t.type==='income'?'var(--moss)':'var(--terracota)')+'">'+icon+'</div>'
+    +'<div class="tx-info"><div class="tx-desc">'+t.description+recTag+natTag+'</div>'
+    +'<div class="tx-meta">'+t.category+' · '+t.user_name+' · '+t.date+(paid?' · <span style="color:var(--moss)">pago</span>':' · <span style="color:var(--mustard)">pendente</span>')+'</div>'
+    +obsHtml+payHtml+'</div>'
+    +'<div class="tx-amt '+t.type+'" style="'+(paid?'':'text-decoration:none')+'">'+(t.type==='expense'?'−':'+')+fmt(t.amount)+'</div>'
+    +(own?'<div class="tx-actions"><button class="tx-btn edit" onclick="openEdit(\''+t.id+'\')" title="Editar">✎</button><button class="tx-btn del" onclick="confirmDel(\''+t.id+'\',\''+t.description.replace(/'/g,'')+'\')">×</button></div>':'<div style="width:44px"></div>')
+    +'</div>';
+}
+function isPaid(t){return t.paid===true||t.paid==='true'||t.paid===1;}
+function togglePaid(id,currentPaid){
+  var newPaid=!currentPaid;
+  sbPatch('fin_transactions',id,{paid:newPaid}).then(function(){
+    var btn=document.getElementById('paid-'+id);
+    if(btn){
+      btn.className='tx-paid'+(newPaid?' paid':'');
+      btn.textContent=newPaid?'✓':'';
+      btn.title=newPaid?'Marcar como pendente':'Marcar como pago';
+      btn.setAttribute('onclick','togglePaid(\''+id+'\','+newPaid+')');
+      var item=btn.closest('.tx-item');
+      if(item){
+        var spans=item.querySelectorAll('.tx-meta span');
+        spans.forEach(function(sp){
+          if(sp.textContent==='pago'||sp.textContent==='pendente'){
+            sp.textContent=newPaid?'pago':'pendente';
+            sp.style.color=newPaid?'var(--moss)':'var(--mustard)';
+          }
+        });
+        item.style.opacity=newPaid?'1':'.85';
+      }
+    }
+  }).catch(function(){toast('Erro','err');});
 }
 function confirmDel(id,desc){
   document.getElementById('modal-content').innerHTML=
@@ -732,7 +772,7 @@ function renderHist(){
   var cycleOpts=cycles.map(function(c,i){return '<option value="'+c.start+'|'+c.end+'"'+(i===0?' selected':'')+'>'+c.label+'</option>';}).join('');
   document.getElementById('main').innerHTML=
     '<div class="page-header"><div class="orn-sm">— ✿ —</div><h2><em>Histórico</em></h2><p>Todos os lançamentos por ciclo</p></div>'+
-    '<div class="card"><div class="filter-bar"><select class="fsel" id="fil-cy" onchange="filterH()">'+cycleOpts+'</select><select class="fsel" id="fil-t" onchange="filterH()"><option value="">Todos</option><option value="expense">Despesas</option><option value="income">Receitas</option></select><select class="fsel" id="fil-u" onchange="filterH()"><option value="">Todos</option><option value="Maria">Maria</option><option value="Murilo">Murilo</option></select><select class="fsel" id="fil-nat" onchange="filterH()"><option value="">Natureza</option><option value="conjunto">Conjunto</option><option value="Maria">Individual Maria</option><option value="Murilo">Individual Murilo</option></select><select class="fsel" id="fil-pay" onchange="filterH()"><option value="">Pagamento</option>'+PAYMENTS.map(function(p){return '<option value="'+p+'">'+p+'</option>';}).join('')+'</select><select class="fsel" id="fil-cat" onchange="filterH()"><option value="">Categorias</option>'+catOpts+'</select></div><div id="hist-summary" style="margin-bottom:10px"></div><div id="hist-list"><div class="empty">carregando...</div></div></div>';
+    '<div class="card"><div class="filter-bar"><select class="fsel" id="fil-cy" onchange="filterH()">'+cycleOpts+'</select><select class="fsel" id="fil-t" onchange="filterH()"><option value="">Todos</option><option value="expense">Despesas</option><option value="income">Receitas</option></select><select class="fsel" id="fil-u" onchange="filterH()"><option value="">Todos</option><option value="Maria">Maria</option><option value="Murilo">Murilo</option></select><select class="fsel" id="fil-nat" onchange="filterH()"><option value="">Natureza</option><option value="conjunto">Conjunto</option><option value="Maria">Individual Maria</option><option value="Murilo">Individual Murilo</option></select><select class="fsel" id="fil-pay" onchange="filterH()"><option value="">Pagamento</option>'+PAYMENTS.map(function(p){return '<option value="'+p+'">'+p+'</option>';}).join('')+'</select><select class="fsel" id="fil-status" onchange="filterH()"><option value="">Status</option><option value="paid">Pagos</option><option value="pending">Pendentes</option></select><select class="fsel" id="fil-cat" onchange="filterH()"><option value="">Categorias</option>'+catOpts+'</select></div><div id="hist-summary" style="margin-bottom:10px"></div><div id="hist-list"><div class="empty">carregando...</div></div></div>';
   filterH();
 }
 function filterH(){
@@ -742,6 +782,7 @@ function filterH(){
   var u=(document.getElementById('fil-u')||{}).value||'';
   var nat=(document.getElementById('fil-nat')||{}).value||'';
   var pay=(document.getElementById('fil-pay')||{}).value||'';
+  var status=(document.getElementById('fil-status')||{}).value||'';
   var cat=(document.getElementById('fil-cat')||{}).value||'';
   var list=document.getElementById('hist-list');
   var sumEl=document.getElementById('hist-summary');
@@ -749,6 +790,8 @@ function filterH(){
   fetchRows(start,end,t,u,cat).then(function(rows){
     if(nat) rows=rows.filter(function(r){return r.nature===nat;});
     if(pay) rows=rows.filter(function(r){return r.payment===pay;});
+    if(status==='paid') rows=rows.filter(function(r){return r.paid===true||r.paid==='true';});
+    if(status==='pending') rows=rows.filter(function(r){return !r.paid||r.paid==='false';});
     if(!rows.length){if(list)list.innerHTML='<div class="empty">Nenhum lançamento encontrado neste ciclo.</div>';if(sumEl)sumEl.innerHTML='';return;}
     var totExp=rows.filter(function(x){return x.type==='expense';}).reduce(function(s,x){return s+Number(x.amount);},0);
     var totInc=rows.filter(function(x){return x.type==='income';}).reduce(function(s,x){return s+Number(x.amount);},0);
