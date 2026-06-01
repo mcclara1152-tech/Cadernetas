@@ -496,11 +496,6 @@ function renderDash(){
     var mExp=exp.filter(function(t){return t.nature==='Maria';}).reduce(function(s,t){return s+Number(t.amount);},0);
     var muExp=exp.filter(function(t){return t.nature==='Murilo';}).reduce(function(s,t){return s+Number(t.amount);},0);
     var myExp=exp.filter(function(t){return t.nature===USER;}).reduce(function(s,t){return s+Number(t.amount);},0);
-    var expIndiv=exp.filter(function(t){return t.nature!=='conjunto';});
-    var totExpIndiv=expIndiv.reduce(function(s,t){return s+Number(t.amount);},0);
-    var ideal=totExpIndiv*CFG.m/100;var diff=mExp-ideal;
-    var sp=totExpIndiv>0?Math.round(mExp/totExpIndiv*100):CFG.m;
-    var debt=Math.abs(diff)<0.5?'Tudo em ordem ✦':diff>0?'Maria deve pagar '+fmt(diff)+' a mais que Murilo':'Murilo deve pagar '+fmt(Math.abs(diff))+' a mais que Maria';
     var cmap={};exp.forEach(function(t){cmap[t.category]=(cmap[t.category]||0)+Number(t.amount);});
     var carr=Object.keys(cmap).map(function(k){return{name:k,val:cmap[k],limit:catLimit(k)};}).sort(function(a,b){return b.val-a.val;});
     var maxC=carr.length?carr[0].val:1;
@@ -547,12 +542,6 @@ function renderDash(){
         '<div class="sum-tile '+(realBal>=0?'green':'red')+'"><div class="sum-label">Saldo real</div><div class="sum-val '+(realBal>=0?'green':'red')+'" style="font-size:16px">'+(realBal>=0?'+':'')+fmt(realBal)+'</div><div class="sum-sub">só pagos/recebidos</div></div>'+
         '<div class="sum-tile gold"><div class="sum-label">Pendente</div><div class="sum-val gold" style="font-size:16px">'+fmt(pendExp)+'</div><div class="sum-sub">a pagar</div></div>'+
         '<div class="sum-tile rose" style="grid-column:span 2"><div class="sum-label">Seus gastos — '+USER+'</div><div class="sum-val rose" style="font-size:16px">'+fmt(myExp)+'</div></div>'+
-      '</div>'+
-      '<div class="card"><div class="card-title">Divisão do casal <small>'+CFG.m+'% · '+CFG.mu+'%</small></div>'+
-        '<div class="bal-box"><div class="bal-label">Maria vs. Murilo — despesas por natureza</div>'+
-        '<div class="bal-bar"><div class="bal-fill" style="width:'+sp+'%"></div></div>'+
-        '<div class="bal-names"><span>Maria '+fmtS(mExp)+' ('+sp+'%)</span><span>Murilo '+fmtS(muExp)+' ('+(100-sp)+'%)</span></div></div>'+
-        '<div class="debt-box'+(Math.abs(diff)<0.5?' ok':'')+'">'+debt+'</div>'+
       '</div>'+
       '<div class="card"><div class="card-title">Projeção do ciclo</div>'+
         '<div class="proj-box"><div class="proj-label">Saldo projetado</div>'+
@@ -771,7 +760,8 @@ function setType(t){
   var sel=document.getElementById('f-cat');if(sel)sel.innerHTML=catOpts;
   // troca labels
   var lbl=document.getElementById('f-cat-label');if(lbl)lbl.textContent='Categoria';
-  var nlbl=document.getElementById('f-nature-label');if(nlbl)nlbl.textContent=isInc?'Recebido por':'Natureza do gasto';
+  var nlbl=document.getElementById('f-nature-label');if(nlbl)nlbl.style.display=isInc?'none':'';
+  var ntog=document.querySelector('.nature-toggle');if(ntog)ntog.style.display=isInc?'none':'flex';
   var ulbl=document.getElementById('f-user-label');if(ulbl)ulbl.textContent=isInc?'Recebido por':'Pago por';
   // forma de pagamento só faz sentido em despesas
   var payWrap=document.getElementById('f-pay-wrap');if(payWrap)payWrap.style.display=isInc?'none':'';
@@ -843,16 +833,16 @@ function filterH(){
       var indExp=rows.filter(function(x){return x.type==='expense'&&x.nature===u;}).reduce(function(s,x){return s+Number(x.amount);},0);
       var conjExp=rows.filter(function(x){return x.type==='expense'&&x.nature==='conjunto';}).reduce(function(s,x){return s+Number(x.amount);},0);
       extraHtml='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'+
-        '<div class="sum-tile rose" style="flex:1;min-width:80px"><div class="sum-label">Individual</div><div class="sum-val rose" style="font-size:13px">'+fmtS(indExp)+'</div></div>'+
-        '<div class="sum-tile gold" style="flex:1;min-width:80px"><div class="sum-label">Conjunto</div><div class="sum-val gold" style="font-size:13px">'+fmtS(conjExp)+'</div></div>'+
+        '<div class="sum-tile rose" style="flex:1;min-width:80px"><div class="sum-label">Individual</div><div class="sum-val rose" style="font-size:13px">'+fmt(indExp)+'</div></div>'+
+        '<div class="sum-tile gold" style="flex:1;min-width:80px"><div class="sum-label">Conjunto</div><div class="sum-val gold" style="font-size:13px">'+fmt(conjExp)+'</div></div>'+
       '</div>';
     }
     if(sumEl)sumEl.innerHTML=
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'+
-        '<div class="sum-tile green"><div class="sum-label">Receitas</div><div class="sum-val green" style="font-size:15px">'+fmtS(totInc)+'</div></div>'+
-        '<div class="sum-tile red"><div class="sum-label">Despesas</div><div class="sum-val red" style="font-size:15px">'+fmtS(totExp)+'</div></div>'+
-        '<div class="sum-tile '+(realBalH>=0?'green':'red')+'"><div class="sum-label">Saldo real</div><div class="sum-val '+(realBalH>=0?'green':'red')+'" style="font-size:15px">'+(realBalH>=0?'+':'')+fmtS(realBalH)+'</div></div>'+
-        '<div class="sum-tile gold"><div class="sum-label">Pendente</div><div class="sum-val gold" style="font-size:15px">'+fmtS(pendExpH)+'</div></div>'+
+        '<div class="sum-tile green"><div class="sum-label">Receitas</div><div class="sum-val green" style="font-size:15px">'+fmt(totInc)+'</div></div>'+
+        '<div class="sum-tile red"><div class="sum-label">Despesas</div><div class="sum-val red" style="font-size:15px">'+fmt(totExp)+'</div></div>'+
+        '<div class="sum-tile '+(realBalH>=0?'green':'red')+'"><div class="sum-label">Saldo real</div><div class="sum-val '+(realBalH>=0?'green':'red')+'" style="font-size:15px">'+(realBalH>=0?'+':'')+fmt(realBalH)+'</div></div>'+
+        '<div class="sum-tile gold"><div class="sum-label">Pendente</div><div class="sum-val gold" style="font-size:15px">'+fmt(pendExpH)+'</div></div>'+
       '</div>'+extraHtml;
     if(list)list.innerHTML='<div class="tx-list">'+rows.map(mkTx).join('')+'</div><div class="hist-summary"><span>'+rows.length+' lançamentos</span><span style="color:'+(bal>=0?'var(--moss)':'var(--terracota)')+'\">'+(bal>=0?'+':'')+fmt(bal)+'</span></div>';
   }).catch(function(e){if(list)list.innerHTML='<div style="color:var(--terracota);font-size:14px">Erro: '+e.message+'</div>';});
