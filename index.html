@@ -164,7 +164,8 @@ body{background:var(--cream);color:var(--ink);font-family:'Crimson Pro',Georgia,
 .tx-btn.edit:hover{color:var(--mustard);}
 .tx-paid{width:22px;height:22px;border-radius:50%;border:2px solid var(--border2);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;color:transparent;transition:all .2s;flex-shrink:0;}
 .tx-paid.paid{background:var(--moss);border-color:var(--moss);color:var(--paper);}
-.tx-paid:hover{border-color:var(--moss);}padding:1px 5px;border-radius:10px;background:var(--rose-dim);color:var(--rose);border:1px solid var(--rose);margin-left:4px;vertical-align:middle;letter-spacing:1px;text-transform:uppercase;}
+.tx-paid:hover{border-color:var(--moss);}
+.tag-recur{font-size:9px;padding:1px 5px;border-radius:10px;background:var(--rose-dim);color:var(--rose);border:1px solid var(--rose);margin-left:4px;vertical-align:middle;letter-spacing:1px;text-transform:uppercase;}
 .tag-conjunto{font-size:9px;padding:1px 5px;border-radius:10px;background:var(--mustard-dim);color:var(--mustard);border:1px solid var(--mustard);margin-left:4px;vertical-align:middle;letter-spacing:1px;text-transform:uppercase;}
 .tag-maria{font-size:9px;padding:1px 5px;border-radius:10px;background:var(--terracota-dim);color:var(--terracota);border:1px solid var(--terracota);margin-left:4px;vertical-align:middle;letter-spacing:1px;text-transform:uppercase;}
 .tag-murilo{font-size:9px;padding:1px 5px;border-radius:10px;background:var(--moss-dim);color:var(--moss);border:1px solid var(--moss);margin-left:4px;vertical-align:middle;letter-spacing:1px;text-transform:uppercase;}
@@ -488,20 +489,18 @@ function renderDash(){
     var inc=all.filter(function(t){return t.type==='income';});
     var totExp=exp.reduce(function(s,t){return s+Number(t.amount);},0);
     var totInc=inc.reduce(function(s,t){return s+Number(t.amount);},0);
-    var bal=totInc-totExp;
     var paidExp=exp.filter(function(t){return isPaid(t);}).reduce(function(s,t){return s+Number(t.amount);},0);
     var paidInc=inc.filter(function(t){return isPaid(t);}).reduce(function(s,t){return s+Number(t.amount);},0);
     var realBal=paidInc-paidExp;
     var pendExp=totExp-paidExp;
-    var mExp=exp.filter(function(t){return t.user_name==='Maria';}).reduce(function(s,t){return s+Number(t.amount);},0);
-    var muExp=exp.filter(function(t){return t.user_name==='Murilo';}).reduce(function(s,t){return s+Number(t.amount);},0);
-    var myExp=exp.filter(function(t){return t.user_name===USER;}).reduce(function(s,t){return s+Number(t.amount);},0);
-    // para divisão, considerar só pagamentos individuais (excluir Conjunto)
-    var expIndiv=exp.filter(function(t){return t.user_name!=='Conjunto';});
+    var mExp=exp.filter(function(t){return t.nature==='Maria';}).reduce(function(s,t){return s+Number(t.amount);},0);
+    var muExp=exp.filter(function(t){return t.nature==='Murilo';}).reduce(function(s,t){return s+Number(t.amount);},0);
+    var myExp=exp.filter(function(t){return t.nature===USER;}).reduce(function(s,t){return s+Number(t.amount);},0);
+    var expIndiv=exp.filter(function(t){return t.nature!=='conjunto';});
     var totExpIndiv=expIndiv.reduce(function(s,t){return s+Number(t.amount);},0);
     var ideal=totExpIndiv*CFG.m/100;var diff=mExp-ideal;
     var sp=totExpIndiv>0?Math.round(mExp/totExpIndiv*100):CFG.m;
-    var debt=Math.abs(diff)<0.5?'Tudo em ordem ✦':diff>0?'Murilo deve '+fmt(diff)+' a Maria':'Maria deve '+fmt(Math.abs(diff))+' a Murilo';
+    var debt=Math.abs(diff)<0.5?'Tudo em ordem ✦':diff>0?'Maria deve pagar '+fmt(diff)+' a mais que Murilo':'Murilo deve pagar '+fmt(Math.abs(diff))+' a mais que Maria';
     var cmap={};exp.forEach(function(t){cmap[t.category]=(cmap[t.category]||0)+Number(t.amount);});
     var carr=Object.keys(cmap).map(function(k){return{name:k,val:cmap[k],limit:catLimit(k)};}).sort(function(a,b){return b.val-a.val;});
     var maxC=carr.length?carr[0].val:1;
@@ -545,11 +544,12 @@ function renderDash(){
       '<div class="sum-grid">'+
         '<div class="sum-tile green"><div class="sum-label">Receitas</div><div class="sum-val green">'+fmtS(totInc)+'</div><div class="sum-sub">'+inc.length+' lançamentos</div></div>'+
         '<div class="sum-tile red"><div class="sum-label">Despesas</div><div class="sum-val red">'+fmtS(totExp)+'</div><div class="sum-sub">'+exp.length+' lançamentos</div></div>'+
-        '<div class="sum-tile '+(realBal>=0?'green':'red')+'"><div class="sum-label">Saldo real</div><div class="sum-val '+(realBal>=0?'green':'red')+'">'+(realBal>=0?'+':'')+fmtS(realBal)+'</div><div class="sum-sub">só pagos</div></div>'+
+        '<div class="sum-tile '+(realBal>=0?'green':'red')+'"><div class="sum-label">Saldo real</div><div class="sum-val '+(realBal>=0?'green':'red')+'">'+(realBal>=0?'+':'')+fmtS(realBal)+'</div><div class="sum-sub">só pagos/recebidos</div></div>'+
         '<div class="sum-tile gold"><div class="sum-label">Pendente</div><div class="sum-val gold">'+fmtS(pendExp)+'</div><div class="sum-sub">a pagar</div></div>'+
+        '<div class="sum-tile rose" style="grid-column:span 2"><div class="sum-label">Seus gastos — '+USER+'</div><div class="sum-val rose" style="font-size:16px">'+fmtS(myExp)+'</div></div>'+
       '</div>'+
       '<div class="card"><div class="card-title">Divisão do casal <small>'+CFG.m+'% · '+CFG.mu+'%</small></div>'+
-        '<div class="bal-box"><div class="bal-label">Maria vs. Murilo — pagamentos individuais</div>'+
+        '<div class="bal-box"><div class="bal-label">Maria vs. Murilo — despesas por natureza</div>'+
         '<div class="bal-bar"><div class="bal-fill" style="width:'+sp+'%"></div></div>'+
         '<div class="bal-names"><span>Maria '+fmtS(mExp)+' ('+sp+'%)</span><span>Murilo '+fmtS(muExp)+' ('+(100-sp)+'%)</span></div></div>'+
         '<div class="debt-box'+(Math.abs(diff)<0.5?' ok':'')+'">'+debt+'</div>'+
@@ -640,14 +640,18 @@ function mkTx(t){
   var obsHtml=t.obs?'<div class="tx-obs">'+t.obs+'</div>':'';
   var payHtml=t.payment?'<div class="tx-obs" style="color:var(--moss)">'+t.payment+'</div>':'';
   var paid=isPaid(t);
-  var paidBtn='<button class="tx-paid'+(paid?' paid':'')+'" id="paid-'+t.id+'" onclick="togglePaid(\''+t.id+'\','+paid+')" title="'+(paid?'Marcar como pendente':'Marcar como pago')+'">'+(paid?'✓':'')+'</button>';
+  var isInc=t.type==='income';
+  var statusHtml=isInc
+    ?(paid?' · <span style="color:var(--moss)">recebido</span>':' · <span style="color:var(--mustard)">a receber</span>')
+    :(paid?' · <span style="color:var(--moss)">pago</span>':' · <span style="color:var(--mustard)">pendente</span>');
+  var paidBtn='<button class="tx-paid'+(paid?' paid':'')+'" id="paid-'+t.id+'" onclick="togglePaid(\''+t.id+'\','+paid+')" title="'+(isInc?(paid?'Marcar como a receber':'Marcar como recebido'):(paid?'Marcar como pendente':'Marcar como pago'))+'">'+(paid?'✓':'')+'</button>';
   return '<div class="tx-item" style="opacity:'+(paid?'1':'.85')+'">'
     +paidBtn
-    +'<div class="tx-icon" style="color:'+(t.type==='income'?'var(--moss)':'var(--terracota)')+'">'+icon+'</div>'
+    +'<div class="tx-icon" style="color:'+(isInc?'var(--moss)':'var(--terracota)')+'">'+icon+'</div>'
     +'<div class="tx-info"><div class="tx-desc">'+t.description+recTag+'</div>'
-    +'<div class="tx-meta">'+t.category+' · '+t.user_name+natTag+' · '+t.date+(paid?' · <span style="color:var(--moss)">pago</span>':' · <span style="color:var(--mustard)">pendente</span>')+'</div>'
+    +'<div class="tx-meta">'+t.category+' · '+t.user_name+natTag+' · '+t.date+statusHtml+'</div>'
     +obsHtml+payHtml+'</div>'
-    +'<div class="tx-amt '+t.type+'">'+(t.type==='expense'?'−':'+')+fmt(t.amount)+'</div>'
+    +'<div class="tx-amt '+t.type+'">'+(isInc?'+':'−')+fmt(t.amount)+'</div>'
     +(own?'<div class="tx-actions"><button class="tx-btn edit" onclick="openEdit(\''+t.id+'\')" title="Editar">✎</button><button class="tx-btn del" onclick="confirmDel(\''+t.id+'\',\''+t.description.replace(/'/g,'')+'\')">×</button></div>':'<div style="width:44px"></div>')
     +'</div>';
 }
@@ -728,28 +732,52 @@ function saveEdit(id){
 function closeModal(){document.getElementById('modal-bg').classList.remove('show');}
 
 // ── FORM ──
+var INC_CATS=['Salário','Freelance','Presente','Reembolso','Outros'];
+
 function renderForm(){
   var today=new Date().toISOString().split('T')[0];
   var cycle=curCycle();
   var catOpts=catNames().map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
+  var incCatOpts=INC_CATS.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
   TX_TYPE='expense';TX_NATURE='conjunto';
   document.getElementById('main').innerHTML=
     '<div class="page-header"><div class="orn-sm">— ✿ —</div><h2>Novo <em>Lançamento</em></h2><p>Ciclo atual: '+cycle.label+'</p></div>'+
     '<div class="card"><div class="type-toggle"><button class="type-btn exp" id="btn-exp" onclick="setType(\'expense\')">↓ Despesa</button><button class="type-btn" id="btn-inc" onclick="setType(\'income\')">↑ Receita</button></div>'+
-    '<div class="form-grid"><div class="field"><label>Descrição</label><input type="text" id="f-desc" placeholder="Ex: Mercado, Aluguel..." oninput="suggestCat(this.value)"></div><div class="field"><label>Valor (R$)</label><input type="number" id="f-val" placeholder="0,00" min="0" step="0.01"></div><div class="field"><label>Categoria</label><select id="f-cat">'+catOpts+'</select></div><div class="field"><label>Data</label><input type="date" id="f-date" value="'+today+'"></div></div>'+
-    '<div class="field" style="margin-top:10px"><label>Natureza do gasto</label></div>'+
+    '<div class="form-grid">'+
+      '<div class="field"><label>Descrição</label><input type="text" id="f-desc" placeholder="Ex: Mercado, Salário..." oninput="suggestCat(this.value)"></div>'+
+      '<div class="field"><label>Valor (R$)</label><input type="number" id="f-val" placeholder="0,00" min="0" step="0.01"></div>'+
+      '<div class="field"><label id="f-cat-label">Categoria</label><select id="f-cat">'+catOpts+'</select></div>'+
+      '<div class="field"><label>Data</label><input type="date" id="f-date" value="'+today+'"></div>'+
+    '</div>'+
+    '<div class="field" style="margin-top:10px"><label id="f-nature-label">Natureza do gasto</label></div>'+
     '<div class="nature-toggle">'+
       '<button class="nature-btn sel-conjunto" id="nat-conjunto" onclick="setNature(\'conjunto\')">Conjunto</button>'+
       '<button class="nature-btn" id="nat-maria" onclick="setNature(\'Maria\')">Maria</button>'+
       '<button class="nature-btn" id="nat-murilo" onclick="setNature(\'Murilo\')">Murilo</button>'+
     '</div>'+
-    '<div class="field" style="margin-top:10px"><label>Pago por</label><select id="f-user"><option value="'+USER+'" selected>'+USER+'</option><option value="'+(USER==='Maria'?'Murilo':'Maria')+'">'+(USER==='Maria'?'Murilo':'Maria')+'</option><option value="Conjunto">Conjunto</option></select></div>'+
-    '<div class="field" style="margin-top:10px"><label>Forma de pagamento</label><select id="f-pay">'+PAYMENTS.map(function(p){return '<option value="'+p+'">'+p+'</option>';}).join('')+'</select></div>'+
-    '<div class="field" style="margin-top:10px"><label>Observação</label><input type="text" id="f-obs" placeholder="Ex: parcelado em 3x, opcional..."></div>'+
+    '<div class="field" style="margin-top:10px"><label id="f-user-label">Pago por</label><select id="f-user"><option value="'+USER+'" selected>'+USER+'</option><option value="'+(USER==='Maria'?'Murilo':'Maria')+'">'+(USER==='Maria'?'Murilo':'Maria')+'</option><option value="Conjunto">Conjunto</option></select></div>'+
+    '<div class="field" style="margin-top:10px" id="f-pay-wrap"><label>Forma de pagamento</label><select id="f-pay">'+PAYMENTS.map(function(p){return '<option value="'+p+'">'+p+'</option>';}).join('')+'</select></div>'+
+    '<div class="field" style="margin-top:10px"><label>Observação</label><input type="text" id="f-obs" placeholder="opcional..."></div>'+
     '<label class="recur-row"><input type="checkbox" id="f-recur"> Lançamento recorrente — repete todo ciclo</label>'+
     '<button class="btn-primary" id="btn-save" onclick="submitTx()">Registrar lançamento</button></div>';
 }
-function setType(t){TX_TYPE=t;document.getElementById('btn-exp').className='type-btn'+(t==='expense'?' exp':'');document.getElementById('btn-inc').className='type-btn'+(t==='income'?' inc':'');}
+function setType(t){
+  TX_TYPE=t;
+  document.getElementById('btn-exp').className='type-btn'+(t==='expense'?' exp':'');
+  document.getElementById('btn-inc').className='type-btn'+(t==='income'?' inc':'');
+  var isInc=t==='income';
+  // troca categorias
+  var catOpts=isInc?INC_CATS.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join(''):catNames().map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
+  var sel=document.getElementById('f-cat');if(sel)sel.innerHTML=catOpts;
+  // troca labels
+  var lbl=document.getElementById('f-cat-label');if(lbl)lbl.textContent='Categoria';
+  var nlbl=document.getElementById('f-nature-label');if(nlbl)nlbl.textContent=isInc?'Recebido por':'Natureza do gasto';
+  var ulbl=document.getElementById('f-user-label');if(ulbl)ulbl.textContent=isInc?'Recebido por':'Pago por';
+  // forma de pagamento só faz sentido em despesas
+  var payWrap=document.getElementById('f-pay-wrap');if(payWrap)payWrap.style.display=isInc?'none':'';
+  // receitas ficam como pagas automaticamente
+  if(isInc){var recur=document.getElementById('f-recur');if(recur)recur.checked=false;}
+}
 function setNature(n){
   TX_NATURE=n;
   document.getElementById('nat-conjunto').className='nature-btn'+(n==='conjunto'?' sel-conjunto':'');
@@ -766,9 +794,10 @@ function submitTx(){
   var obs=document.getElementById('f-obs').value.trim();
   var recur=document.getElementById('f-recur').checked;
   var pay=document.getElementById('f-pay')?document.getElementById('f-pay').value:'';
+  var autoPaid=TX_TYPE==='income'?true:false;
   if(!desc||!val||val<=0){toast('Preencha descrição e valor','err');return;}
   var btn=document.getElementById('btn-save');btn.disabled=true;btn.textContent='Registrando...';
-  sbPost('fin_transactions',{description:desc,amount:val,category:cat,date:date,month:mon,type:TX_TYPE,user_name:who,nature:TX_NATURE,payment:pay,obs:obs,recurring:recur,created_by:USER}).then(function(){
+  sbPost('fin_transactions',{description:desc,amount:val,category:cat,date:date,month:mon,type:TX_TYPE,user_name:who,nature:TX_NATURE,payment:pay,paid:autoPaid,obs:obs,recurring:recur,created_by:USER}).then(function(){
     btn.textContent='Registrado ✦';btn.className='btn-primary saved';
     setTimeout(function(){renderForm();},900);
   }).catch(function(e){toast('Erro: '+e.message,'err');btn.disabled=false;btn.textContent='Registrar lançamento';});
@@ -781,7 +810,7 @@ function renderHist(){
   var cycleOpts=cycles.map(function(c,i){return '<option value="'+c.start+'|'+c.end+'"'+(i===0?' selected':'')+'>'+c.label+'</option>';}).join('');
   document.getElementById('main').innerHTML=
     '<div class="page-header"><div class="orn-sm">— ✿ —</div><h2><em>Histórico</em></h2><p>Todos os lançamentos por ciclo</p></div>'+
-    '<div class="card"><div class="filter-bar"><select class="fsel" id="fil-cy" onchange="filterH()">'+cycleOpts+'</select><select class="fsel" id="fil-t" onchange="filterH()"><option value="">Todos</option><option value="expense">Despesas</option><option value="income">Receitas</option></select><select class="fsel" id="fil-u" onchange="filterH()"><option value="">Todos</option><option value="Maria">Maria</option><option value="Murilo">Murilo</option></select><select class="fsel" id="fil-nat" onchange="filterH()"><option value="">Natureza</option><option value="conjunto">Conjunto</option><option value="Maria">Individual Maria</option><option value="Murilo">Individual Murilo</option></select><select class="fsel" id="fil-pay" onchange="filterH()"><option value="">Pagamento</option>'+PAYMENTS.map(function(p){return '<option value="'+p+'">'+p+'</option>';}).join('')+'</select><select class="fsel" id="fil-status" onchange="filterH()"><option value="">Status</option><option value="paid">Pagos</option><option value="pending">Pendentes</option></select><select class="fsel" id="fil-cat" onchange="filterH()"><option value="">Categorias</option>'+catOpts+'</select></div><div id="hist-summary" style="margin-bottom:10px"></div><div id="hist-list"><div class="empty">carregando...</div></div></div>';
+    '<div class="card"><div class="filter-bar"><select class="fsel" id="fil-cy" onchange="filterH()">'+cycleOpts+'</select><select class="fsel" id="fil-t" onchange="filterH()"><option value="">Todos</option><option value="expense">Despesas</option><option value="income">Receitas</option></select><select class="fsel" id="fil-u" onchange="filterH()"><option value="">Todos</option><option value="Maria">Maria</option><option value="Murilo">Murilo</option></select><select class="fsel" id="fil-nat" onchange="filterH()"><option value="">Natureza</option><option value="conjunto">Conjunto</option><option value="Maria">Individual Maria</option><option value="Murilo">Individual Murilo</option></select><select class="fsel" id="fil-pay" onchange="filterH()"><option value="">Pagamento</option>'+PAYMENTS.map(function(p){return '<option value="'+p+'">'+p+'</option>';}).join('')+'</select><select class="fsel" id="fil-status" onchange="filterH()"><option value="">Status</option><option value="paid">Pagos/Recebidos</option><option value="pending">Pendentes/A receber</option></select><select class="fsel" id="fil-cat" onchange="filterH()"><option value="">Categorias</option>'+catOpts+'</select></div><div id="hist-summary" style="margin-bottom:10px"></div><div id="hist-list"><div class="empty">carregando...</div></div></div>';
   filterH();
 }
 function filterH(){
@@ -881,16 +910,21 @@ function openQuickLaunch(){
     '<div class="field" style="margin-bottom:9px"><label>Descrição</label><input type="text" id="q-desc" placeholder="Ex: Mercado..." oninput="suggestQCat(this.value)"></div>'+
     '<div class="field" style="margin-bottom:9px"><label>Valor (R$)</label><input type="number" id="q-val" placeholder="0,00" min="0" step="0.01"></div>'+
     '<div class="field" style="margin-bottom:9px"><label>Categoria</label><select id="q-cat">'+catOpts+'</select></div>'+
-    '<div class="field" style="margin-bottom:9px"><label>Pago por</label><select id="q-user"><option value="'+USER+'" selected>'+USER+'</option><option value="'+other+'">'+other+'</option><option value="Conjunto">Conjunto</option></select></div>'+
-    '<div class="field" style="margin-bottom:9px"><label>Forma de pagamento</label><select id="q-pay">'+PAYMENTS.map(function(p){return '<option value="'+p+'">'+p+'</option>';}).join('')+'</select></div>'+
+    '<div class="field" style="margin-bottom:9px"><label id="q-user-lbl">Pago por</label><select id="q-user"><option value="'+USER+'" selected>'+USER+'</option><option value="'+other+'">'+other+'</option><option value="Conjunto">Conjunto</option></select></div>'+
+    '<div class="field" style="margin-bottom:9px" id="q-pay-wrap"><label>Forma de pagamento</label><select id="q-pay">'+PAYMENTS.map(function(p){return '<option value="'+p+'">'+p+'</option>';}).join('')+'</select></div>'+
     '<div class="modal-actions"><button class="btn-primary" onclick="submitQuick()">Registrar</button><button class="btn-secondary" onclick="closeModal()">Cancelar</button></div>';
   document.getElementById('modal-bg').classList.add('show');
 }
 var Q_TYPE='expense';
 function setQType(t){
   Q_TYPE=t;
+  var isInc=t==='income';
   document.getElementById('q-btn-exp').className='type-btn'+(t==='expense'?' exp':'');
   document.getElementById('q-btn-inc').className='type-btn'+(t==='income'?' inc':'');
+  var sel=document.getElementById('q-cat');
+  if(sel)sel.innerHTML=isInc?INC_CATS.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join(''):catNames().map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
+  var lbl=document.getElementById('q-user-lbl');if(lbl)lbl.textContent=isInc?'Recebido por':'Pago por';
+  var pw=document.getElementById('q-pay-wrap');if(pw)pw.style.display=isInc?'none':'';
 }
 function suggestCat(val){
   var sel=document.getElementById('f-cat');if(!sel)return;
@@ -922,13 +956,16 @@ function submitQuick(){
   if(!desc||!val||val<=0){toast('Preencha descrição e valor','err');return;}
   var today=new Date().toISOString().split('T')[0];
   var mon=today.substring(0,7);
+  var isInc=Q_TYPE==='income';
+  var who=document.getElementById('q-user').value;
   sbPost('fin_transactions',{
     description:desc,amount:val,
     category:document.getElementById('q-cat').value,
     date:today,month:mon,type:Q_TYPE,
-    user_name:document.getElementById('q-user').value,
-    payment:document.getElementById('q-pay')?document.getElementById('q-pay').value:'',
-    nature:'conjunto',obs:'',recurring:false,created_by:USER
+    user_name:who,
+    payment:(!isInc&&document.getElementById('q-pay'))?document.getElementById('q-pay').value:'',
+    nature:isInc?who:'conjunto',
+    paid:isInc,obs:'',recurring:false,created_by:USER
   }).then(function(){closeModal();toast('Registrado ✦','ok');goTo(curPage());}).catch(function(e){toast('Erro: '+e.message,'err');});
 }
 
@@ -1076,19 +1113,28 @@ function openDrawer(){
   document.getElementById('d-month').textContent='Ciclo '+cycle.label;
   document.getElementById('overlay').classList.add('show');document.getElementById('drawer').classList.add('show');
   fetchRows(cycle.start,cycle.end).then(function(all){
-    var myExp=all.filter(function(t){return t.user_name===USER&&t.type==='expense';}).reduce(function(s,t){return s+Number(t.amount);},0);
+    var myExp=all.filter(function(t){return t.nature===USER&&t.type==='expense';}).reduce(function(s,t){return s+Number(t.amount);},0);
     var myInc=all.filter(function(t){return t.user_name===USER&&t.type==='income';}).reduce(function(s,t){return s+Number(t.amount);},0);
     var myBal=myInc-myExp;
-    var totExpIndiv=all.filter(function(t){return t.type==='expense'&&t.user_name!=='Conjunto';}).reduce(function(s,t){return s+Number(t.amount);},0);
+    var otherExp=all.filter(function(t){return t.nature===other&&t.type==='expense';}).reduce(function(s,t){return s+Number(t.amount);},0);
+    var conjExp=all.filter(function(t){return t.nature==='conjunto'&&t.type==='expense';}).reduce(function(s,t){return s+Number(t.amount);},0);
+    var totExpIndiv=all.filter(function(t){return t.type==='expense'&&t.nature!=='conjunto';}).reduce(function(s,t){return s+Number(t.amount);},0);
     var ideal=totExpIndiv*(USER==='Maria'?CFG.m:CFG.mu)/100;var diff=myExp-ideal;
     var cnt=all.filter(function(t){return t.user_name===USER;}).length;
     var cmap={};all.filter(function(t){return t.user_name===USER&&t.type==='expense';}).forEach(function(t){cmap[t.category]=(cmap[t.category]||0)+Number(t.amount);});
     var top=Object.keys(cmap).sort(function(a,b){return cmap[b]-cmap[a];})[0];
     document.getElementById('d-body').innerHTML=
-      ds('Despesas',fmt(myExp),'red')+ds('Receitas',fmt(myInc),'green')+
+      '<div class="d-sec">Suas despesas</div>'+
+      ds('Despesas '+USER,fmt(myExp),'red')+
+      ds('Despesas '+other,fmt(otherExp),'red')+
+      ds('Despesas conjuntas',fmt(conjExp),'gold')+
+      '<div class="d-sec">Seus ganhos</div>'+
+      ds('Receitas',fmt(myInc),'green')+
       ds('Saldo',(myBal>=0?'+':'')+fmt(myBal),myBal>=0?'green':'red')+
+      '<div class="d-sec">Divisão</div>'+
       ds('Vs. divisão',Math.abs(diff)<0.5?'equilibrado':(diff>0?'pagou +':'pagou −')+fmt(Math.abs(diff)),Math.abs(diff)<0.5?'gold':diff>0?'red':'green')+
-      ds('Lançamentos',cnt+' neste ciclo','gold')+(top?ds('Maior categoria',top,'gold'):'')+
+      ds('Lançamentos',cnt+' neste ciclo','gold')+
+      (top?ds('Maior categoria',top,'gold'):'')+
       ds('Dias restantes',cycle.daysLeft+' dias','gold')+
       '<div class="d-sec">Trocar usuário</div>'+
       '<div class="switch-btn" onclick="switchUser(\''+other+'\')"><div class="sw-av '+other.toLowerCase()+'">'+(other==='Maria'?'M':'Mu')+'</div><div style="flex:1"><div class="sw-name">'+other+'</div><div class="sw-hint">Entrar como '+other+'</div></div><span style="color:var(--ink4)">→</span></div>';
