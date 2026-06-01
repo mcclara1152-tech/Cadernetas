@@ -501,10 +501,17 @@ function renderDash(){
     var maxC=carr.length?carr[0].val:1;
     var catHtml=carr.map(function(c){
       var pct=Math.round(c.val/maxC*100);
-      var over=c.limit>0&&c.val>c.limit;var near=c.limit>0&&c.val>c.limit*0.8&&!over;
-      var color=over?'var(--terracota)':near?'var(--mustard)':'var(--moss)';
-      var warn=over?'<div class="cat-warn" style="color:var(--terracota)">⚠ Limite ultrapassado</div>':near?'<div class="cat-warn" style="color:var(--mustard)">Próximo do limite</div>':'';
-      return '<div class="cat-item"><div class="cat-head"><span class="cat-name">'+c.name+'</span><span class="cat-v">'+fmt(c.val)+(c.limit>0?' / '+fmt(c.limit):'')+'</span></div><div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'+warn+'</div>';
+      var over=c.limit>0&&c.val>c.limit;
+      var exact=c.limit>0&&c.val===c.limit;
+      var near=c.limit>0&&c.val>=c.limit*0.8&&!over&&!exact;
+      var color=over||exact?'var(--terracota)':near?'var(--mustard)':'var(--moss)';
+      var restanteHtml='';
+      if(c.limit>0){
+        var restTxt=over?'⚠ Excedeu '+fmt(c.val-c.limit):exact?'⚠ Limite atingido':near?'Próximo do limite — '+fmt(c.limit-c.val)+' restante':fmt(c.limit-c.val)+' restante';
+        var restColor=over||exact?'var(--terracota)':near?'var(--mustard)':'var(--ink4)';
+        restanteHtml='<div class="cat-warn" style="color:'+restColor+'">'+restTxt+'</div>';
+      }
+      return '<div class="cat-item"><div class="cat-head"><span class="cat-name">'+c.name+'</span><span class="cat-v">'+fmt(c.val)+(c.limit>0?' / '+fmt(c.limit):'')+'</span></div><div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'+restanteHtml+'</div>';
     }).join('');
 
     // Recorrentes do ciclo
@@ -727,7 +734,6 @@ function renderForm(){
   var today=new Date().toISOString().split('T')[0];
   var cycle=curCycle();
   var catOpts=catNames().map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
-  var incCatOpts=INC_CATS.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
   TX_TYPE='expense';TX_NATURE='conjunto';
   document.getElementById('main').innerHTML=
     '<div class="page-header"><div class="orn-sm">— ✿ —</div><h2>Novo <em>Lançamento</em></h2><p>Ciclo atual: '+cycle.label+'</p></div>'+
@@ -784,10 +790,11 @@ function submitTx(){
   var obs=document.getElementById('f-obs').value.trim();
   var recur=document.getElementById('f-recur').checked;
   var pay=document.getElementById('f-pay')?document.getElementById('f-pay').value:'';
-  var autoPaid=TX_TYPE==='income'?true:false;
+  var autoPaid=TX_TYPE==='income';
+  var nature=TX_TYPE==='income'?who:TX_NATURE;
   if(!desc||!val||val<=0){toast('Preencha descrição e valor','err');return;}
   var btn=document.getElementById('btn-save');btn.disabled=true;btn.textContent='Registrando...';
-  sbPost('fin_transactions',{description:desc,amount:val,category:cat,date:date,month:mon,type:TX_TYPE,user_name:who,nature:TX_NATURE,payment:pay,paid:autoPaid,obs:obs,recurring:recur,created_by:USER}).then(function(){
+  sbPost('fin_transactions',{description:desc,amount:val,category:cat,date:date,month:mon,type:TX_TYPE,user_name:who,nature:nature,payment:pay,paid:autoPaid,obs:obs,recurring:recur,created_by:USER}).then(function(){
     btn.textContent='Registrado ✦';btn.className='btn-primary saved';
     setTimeout(function(){renderForm();},900);
   }).catch(function(e){toast('Erro: '+e.message,'err');btn.disabled=false;btn.textContent='Registrar lançamento';});
