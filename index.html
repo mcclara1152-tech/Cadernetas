@@ -625,7 +625,6 @@ function buildChart(){
 
 function mkTx(t){
   var own=t.user_name===USER||t.user_name==='Conjunto'||t.created_by===USER;
-  var canPay=true; // qualquer usuário pode marcar como pago
   var icon=t.type==='income'?'✦':'◆';
   var recTag=t.recurring?' <span class="tag-recur">rec.</span>':'';
   var natTag='';
@@ -847,7 +846,6 @@ var CAT_HINTS={
   'suplemento':'Saúde',
   'cinema':'Lazer','netflix':'Lazer','spotify':'Lazer','show':'Lazer','viagem':'Lazer','bar':'Lazer',
   'cabelo':'Saúde','salão':'Saúde','unhas':'Saúde','barbearia':'Saúde',
-  'roupa':'Vestuário','calçado':'Vestuário','tênis':'Vestuário','sapato':'Vestuário',
   'escola':'Educação','curso':'Educação','livro':'Educação','faculdade':'Educação',
   'cornélio':'Pets','ração':'Pets','veterinário':'Pets','petshop':'Pets',
   'salário':'Outros','freelance':'Outros','icloud':'Outros'
