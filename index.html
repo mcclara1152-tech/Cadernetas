@@ -638,10 +638,10 @@ function mkTx(t){
   return '<div class="tx-item" style="opacity:'+(paid?'1':'.85')+'">'
     +paidBtn
     +'<div class="tx-icon" style="color:'+(t.type==='income'?'var(--moss)':'var(--terracota)')+'">'+icon+'</div>'
-    +'<div class="tx-info"><div class="tx-desc">'+t.description+recTag+natTag+'</div>'
-    +'<div class="tx-meta">'+t.category+' · '+t.user_name+' · '+t.date+(paid?' · <span style="color:var(--moss)">pago</span>':' · <span style="color:var(--mustard)">pendente</span>')+'</div>'
+    +'<div class="tx-info"><div class="tx-desc">'+t.description+recTag+'</div>'
+    +'<div class="tx-meta">'+t.category+' · '+t.user_name+natTag+' · '+t.date+(paid?' · <span style="color:var(--moss)">pago</span>':' · <span style="color:var(--mustard)">pendente</span>')+'</div>'
     +obsHtml+payHtml+'</div>'
-    +'<div class="tx-amt '+t.type+'" style="'+(paid?'':'text-decoration:none')+'">'+(t.type==='expense'?'−':'+')+fmt(t.amount)+'</div>'
+    +'<div class="tx-amt '+t.type+'">'+(t.type==='expense'?'−':'+')+fmt(t.amount)+'</div>'
     +(own?'<div class="tx-actions"><button class="tx-btn edit" onclick="openEdit(\''+t.id+'\')" title="Editar">✎</button><button class="tx-btn del" onclick="confirmDel(\''+t.id+'\',\''+t.description.replace(/'/g,'')+'\')">×</button></div>':'<div style="width:44px"></div>')
     +'</div>';
 }
@@ -799,6 +799,10 @@ function filterH(){
     var totExp=rows.filter(function(x){return x.type==='expense';}).reduce(function(s,x){return s+Number(x.amount);},0);
     var totInc=rows.filter(function(x){return x.type==='income';}).reduce(function(s,x){return s+Number(x.amount);},0);
     var bal=totInc-totExp;
+    var paidExpH=rows.filter(function(x){return x.type==='expense'&&isPaid(x);}).reduce(function(s,x){return s+Number(x.amount);},0);
+    var paidIncH=rows.filter(function(x){return x.type==='income'&&isPaid(x);}).reduce(function(s,x){return s+Number(x.amount);},0);
+    var realBalH=paidIncH-paidExpH;
+    var pendExpH=totExp-paidExpH;
     var extraHtml='';
     if(u){
       var indExp=rows.filter(function(x){return x.type==='expense'&&x.nature===u;}).reduce(function(s,x){return s+Number(x.amount);},0);
