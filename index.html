@@ -483,8 +483,8 @@ function renderDash(){
     var totExp=exp.reduce(function(s,t){return s+Number(t.amount);},0);
     var totInc=inc.reduce(function(s,t){return s+Number(t.amount);},0);
     var bal=totInc-totExp;
-    var paidExp=exp.filter(function(t){return t.paid===true||t.paid==='true';}).reduce(function(s,t){return s+Number(t.amount);},0);
-    var paidInc=inc.filter(function(t){return t.paid===true||t.paid==='true';}).reduce(function(s,t){return s+Number(t.amount);},0);
+    var paidExp=exp.filter(function(t){return isPaid(t);}).reduce(function(s,t){return s+Number(t.amount);},0);
+    var paidInc=inc.filter(function(t){return isPaid(t);}).reduce(function(s,t){return s+Number(t.amount);},0);
     var realBal=paidInc-paidExp;
     var pendExp=totExp-paidExp;
     var mExp=exp.filter(function(t){return t.user_name==='Maria';}).reduce(function(s,t){return s+Number(t.amount);},0);
@@ -625,12 +625,13 @@ function buildChart(){
 
 function mkTx(t){
   var own=t.user_name===USER||t.user_name==='Conjunto'||t.created_by===USER;
+  var canPay=true; // qualquer usuário pode marcar como pago
   var icon=t.type==='income'?'✦':'◆';
-  var recTag=t.recurring?'<span class="tag-recur">rec.</span>':'';
+  var recTag=t.recurring?' <span class="tag-recur">rec.</span>':'';
   var natTag='';
-  if(t.nature==='conjunto') natTag='<span class="tag-conjunto">conj.</span>';
-  else if(t.nature==='Maria') natTag='<span class="tag-maria">Maria</span>';
-  else if(t.nature==='Murilo') natTag='<span class="tag-murilo">Murilo</span>';
+  if(t.nature==='conjunto') natTag=' <span class="tag-conjunto">conj.</span>';
+  else if(t.nature==='Maria') natTag=' <span class="tag-maria">Maria</span>';
+  else if(t.nature==='Murilo') natTag=' <span class="tag-murilo">Murilo</span>';
   var obsHtml=t.obs?'<div class="tx-obs">'+t.obs+'</div>':'';
   var payHtml=t.payment?'<div class="tx-obs" style="color:var(--moss)">'+t.payment+'</div>':'';
   var paid=isPaid(t);
@@ -649,6 +650,7 @@ function isPaid(t){return t.paid===true||t.paid==='true'||t.paid===1;}
 function togglePaid(id,currentPaid){
   var newPaid=!currentPaid;
   sbPatch('fin_transactions',id,{paid:newPaid}).then(function(){
+    // atualiza botão localmente se existir
     var btn=document.getElementById('paid-'+id);
     if(btn){
       btn.className='tx-paid'+(newPaid?' paid':'');
@@ -657,6 +659,7 @@ function togglePaid(id,currentPaid){
       btn.setAttribute('onclick','togglePaid(\''+id+'\','+newPaid+')');
       var item=btn.closest('.tx-item');
       if(item){
+        item.style.opacity=newPaid?'1':'.85';
         var spans=item.querySelectorAll('.tx-meta span');
         spans.forEach(function(sp){
           if(sp.textContent==='pago'||sp.textContent==='pendente'){
@@ -664,10 +667,11 @@ function togglePaid(id,currentPaid){
             sp.style.color=newPaid?'var(--moss)':'var(--mustard)';
           }
         });
-        item.style.opacity=newPaid?'1':'.85';
       }
+    } else {
+      goTo(curPage());
     }
-  }).catch(function(){toast('Erro','err');});
+  }).catch(function(){toast('Erro ao salvar','err');});
 }
 function confirmDel(id,desc){
   document.getElementById('modal-content').innerHTML=
@@ -790,8 +794,8 @@ function filterH(){
   fetchRows(start,end,t,u,cat).then(function(rows){
     if(nat) rows=rows.filter(function(r){return r.nature===nat;});
     if(pay) rows=rows.filter(function(r){return r.payment===pay;});
-    if(status==='paid') rows=rows.filter(function(r){return r.paid===true||r.paid==='true';});
-    if(status==='pending') rows=rows.filter(function(r){return !r.paid||r.paid==='false';});
+    if(status==='paid') rows=rows.filter(function(r){return isPaid(r);});
+    if(status==='pending') rows=rows.filter(function(r){return !isPaid(r);});
     if(!rows.length){if(list)list.innerHTML='<div class="empty">Nenhum lançamento encontrado neste ciclo.</div>';if(sumEl)sumEl.innerHTML='';return;}
     var totExp=rows.filter(function(x){return x.type==='expense';}).reduce(function(s,x){return s+Number(x.amount);},0);
     var totInc=rows.filter(function(x){return x.type==='income';}).reduce(function(s,x){return s+Number(x.amount);},0);
@@ -1102,7 +1106,7 @@ function exportCycle(){
   var cycle=curCycle();
   fetchRows(cycle.start,cycle.end).then(function(all){
     if(!all.length){toast('Nenhum dado para exportar','err');return;}
-    var lines=['Data,Descrição,Categoria,Tipo,Natureza,Pagamento,Valor,Pago por,Recorrente,Observação'];
+    var lines=['Data,Descrição,Categoria,Tipo,Natureza,Pagamento,Valor,Pago por,Pago,Recorrente,Observação'];
     all.forEach(function(t){
       lines.push([
         t.date,
@@ -1113,6 +1117,7 @@ function exportCycle(){
         t.payment||'',
         Number(t.amount).toFixed(2).replace('.',','),
         t.user_name||'',
+        isPaid(t)?'Sim':'Não',
         t.recurring?'Sim':'Não',
         '"'+(t.obs||'').replace(/"/g,'""')+'"'
       ].join(','));
