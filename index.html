@@ -475,7 +475,9 @@ function fetchRows(start,end,type,user,cat){
 }
 
 // ── NAV ──
+var CURRENT_PAGE='dashboard';
 function goTo(page){
+  CURRENT_PAGE=page;
   document.querySelectorAll('.nav-btn').forEach(function(b,i){b.classList.toggle('active',PAGES[i]===page);});
   showLoading();
   // garante que CFG está carregado antes de renderizar
@@ -491,7 +493,7 @@ function goTo(page){
   // se CFG já foi carregado (cycle_start diferente do padrão ou já buscou), renderiza direto
   render();
 }
-function curPage(){var btns=document.querySelectorAll('.nav-btn');for(var i=0;i<btns.length;i++){if(btns[i].classList.contains('active'))return PAGES[i];}return 'dashboard';}
+function curPage(){return CURRENT_PAGE;}
 
 // ── DASHBOARD ──
 function renderDash(){
