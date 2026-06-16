@@ -924,7 +924,7 @@ function confirmarFecharCat(cycleKey,catName,sobraPadrao){
     CAIXA.historico.push({label:catName+' fechada',valor:val,tipo:'fundo_entrada',data:fmtDate(new Date())});
   }
   saveCFG('caixa',JSON.stringify(CAIXA));
-  closeModal();toast(catName+' fechada!','ok');goTo('dashboard');
+  closeModal();toast(catName+' fechada!','ok');goTo(curPage());
 }
 
 function reabrirCat(cycleKey,catName){
@@ -940,7 +940,7 @@ function reabrirCat(cycleKey,catName){
     delete CAIXA.fechadas[cycleKey][catName];
     saveCFG('caixa',JSON.stringify(CAIXA));
     toast(catName+' reaberta — valor devolvido ao fundo','ok');
-    goTo('dashboard');
+    goTo(curPage());
   }
 }
 
@@ -966,7 +966,7 @@ function confirmarEnviarMetas(){
   CAIXA.historico.push({label:'→ '+GOALS[idx].name,valor:val,tipo:'fundo_saida',data:fmtDate(new Date())});
   saveCFG('caixa',JSON.stringify(CAIXA));
   saveCFG('goals',JSON.stringify(GOALS));
-  closeModal();toast('Enviado para '+GOALS[idx].name+'!','ok');goTo('dashboard');
+  closeModal();toast('Enviado para '+GOALS[idx].name+'!','ok');goTo(curPage());
 }
 
 function openUsarFundo(){
@@ -991,7 +991,7 @@ function confirmarUsarFundo(){
   CAIXA.fundo=Number(CAIXA.fundo)-val;
   CAIXA.historico.push({label:obs||(dest==='_livre'?'Uso livre':dest),valor:val,tipo:'retirada',data:fmtDate(new Date())});
   saveCFG('caixa',JSON.stringify(CAIXA));
-  closeModal();toast('Retirado do fundo!','ok');goTo('dashboard');
+  closeModal();toast('Retirado do fundo!','ok');goTo(curPage());
 }
 
 // ── CAIXA DA SOBRA ──
@@ -1038,7 +1038,7 @@ function confirmarFecharCiclo(){
   var d=new Date();
   CAIXA.historico.push({label:obs||'Fechamento '+fmtDateShort(d),valor:val,tipo:'entrada',cat:CAIXA.cats[idx].name,data:fmtDate(d)});
   saveCFG('caixa',JSON.stringify(CAIXA));
-  closeModal();toast('Adicionado ao caixa!','ok');goTo('dashboard');
+  closeModal();toast('Adicionado ao caixa!','ok');goTo(curPage());
 }
 function openRetirarCaixa(){
   var catsOpts=CAIXA.cats.map(function(c,i){return '<option value="'+i+'">'+c.name+' ('+fmt(c.valor)+')</option>';}).join('');
@@ -1060,7 +1060,7 @@ function confirmarRetirarCaixa(){
   var d=new Date();
   CAIXA.historico.push({label:obs||'Retirada',valor:val,tipo:'retirada',cat:CAIXA.cats[idx].name,data:fmtDate(d)});
   saveCFG('caixa',JSON.stringify(CAIXA));
-  closeModal();toast('Retirado do caixa!','ok');goTo('dashboard');
+  closeModal();toast('Retirado do caixa!','ok');goTo(curPage());
 }
 
 // ── COMPARATIVO ──
@@ -1533,4 +1533,3 @@ function exportCycle(){
 </script>
 </body>
 </html>
-
