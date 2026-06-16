@@ -109,7 +109,19 @@ body{background:var(--cream);color:var(--ink);font-family:'Crimson Pro',Georgia,
 .debt-box{padding:11px 13px;border-radius:var(--r);font-family:'IM Fell English',serif;font-style:italic;font-size:14px;color:var(--ink2);border:1px solid var(--terracota);border-left:4px solid var(--terracota);background:var(--terracota-dim);}
 .debt-box.ok{border-color:var(--moss);border-left-color:var(--moss);background:var(--moss-dim);}
 
-/* COMPARE CARD */
+/* CAIXA */
+.caixa-total{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:var(--moss);margin-bottom:4px;}
+.caixa-sub{font-family:'IM Fell English',serif;font-style:italic;font-size:12px;color:var(--ink4);margin-bottom:14px;}
+.caixa-cats{display:flex;flex-direction:column;gap:7px;margin-bottom:14px;}
+.caixa-cat{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--cream2);border:1px solid var(--border);border-radius:var(--rs);}
+.caixa-cat-name{font-size:14px;color:var(--ink2);}
+.caixa-cat-val{font-family:'Playfair Display',serif;font-size:14px;font-weight:700;}
+.caixa-actions{display:flex;gap:7px;}
+.btn-caixa{flex:1;padding:8px;border-radius:var(--rs);border:1.5px solid var(--border);background:var(--cream2);color:var(--ink3);cursor:pointer;font-family:'Crimson Pro',serif;font-size:13px;transition:all .2s;}
+.btn-caixa:hover{border-color:var(--moss);color:var(--moss);}
+.btn-caixa.retirar:hover{border-color:var(--terracota);color:var(--terracota);}
+.caixa-hist{display:flex;flex-direction:column;gap:5px;margin-top:10px;border-top:1px solid var(--border);padding-top:10px;}
+.caixa-hist-item{display:flex;justify-content:space-between;font-size:12px;color:var(--ink4);}
 .compare-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);}
 .compare-row:last-child{border-bottom:none;}
 .compare-cat{font-size:13px;color:var(--ink2);}
@@ -370,6 +382,7 @@ var CFG={m:58,mu:42,cycle_start:1,cycle_name:'',dark:false};
 var CATS=[{name:'Moradia',limit:0},{name:'Alimentação',limit:0},{name:'Transporte',limit:0},{name:'Saúde',limit:0},{name:'Lazer',limit:500},{name:'Educação',limit:0},{name:'Pets',limit:200},{name:'Outros',limit:0}];
 var GOALS=[{id:1,name:'Viagem juntos',target:3000,saved:800,color:'var(--mustard)'},{id:2,name:'Fundo de emergência',target:10000,saved:3200,color:'var(--moss)'}];
 var PAYMENTS=['Crédito Nubank','Crédito C6','Débito Itaú','Pix','Dinheiro'];
+var CAIXA={fundo:0,cats:[{name:'Poupança',valor:0,color:'var(--moss)'},{name:'Reserva de emergência',valor:0,color:'var(--mustard)'},{name:'Livre',valor:0,color:'var(--rose)'}],fechadas:{},historico:[]};
 
 // ── UTILS ──
 function fmt(v){return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2});}
@@ -435,6 +448,7 @@ function loadCFG(){
       if(r.key==='cats'){try{CATS=JSON.parse(r.value);}catch(e){}}
       if(r.key==='goals'){try{GOALS=JSON.parse(r.value);}catch(e){}}
       if(r.key==='payments'){try{PAYMENTS=JSON.parse(r.value);}catch(e){}}
+      if(r.key==='caixa'){try{CAIXA=JSON.parse(r.value);}catch(e){}}
     });
     applyTheme();
   }).catch(function(){});
@@ -499,7 +513,9 @@ function renderDash(){
     var cmap={};exp.forEach(function(t){cmap[t.category]=(cmap[t.category]||0)+Number(t.amount);});
     var carr=Object.keys(cmap).map(function(k){return{name:k,val:cmap[k],limit:catLimit(k)};}).sort(function(a,b){return b.val-a.val;});
     var maxC=carr.length?carr[0].val:1;
-    var catHtml=carr.map(function(c){
+    var cycleKey=cycle.start;
+    var fechadas=CAIXA.fechadas[cycleKey]||{};
+    var catHtml2=carr.map(function(c){
       var pct=Math.round(c.val/maxC*100);
       var over=c.limit>0&&c.val>c.limit;
       var exact=c.limit>0&&c.val===c.limit;
@@ -511,7 +527,9 @@ function renderDash(){
         var restColor=over||exact?'var(--terracota)':near?'var(--mustard)':'var(--ink4)';
         restanteHtml='<div class="cat-warn" style="color:'+restColor+'">'+restTxt+'</div>';
       }
-      return '<div class="cat-item"><div class="cat-head"><span class="cat-name">'+c.name+'</span><span class="cat-v">'+fmt(c.val)+(c.limit>0?' / '+fmt(c.limit):'')+'</span></div><div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'+restanteHtml+'</div>';
+      var isFechada=!!fechadas[c.name];
+      var fecharBtn=c.limit>0?'<button onclick="'+(isFechada?'reabrirCat(\''+cycleKey+'\',\''+c.name+'\')':'fecharCat(\''+cycleKey+'\',\''+c.name+'\','+c.val+','+c.limit+')')+'" style="font-size:11px;padding:2px 8px;border-radius:10px;border:1px solid '+(isFechada?'var(--moss)':'var(--border2)')+';background:'+(isFechada?'var(--moss-dim)':'transparent')+';color:'+(isFechada?'var(--moss)':'var(--ink4)')+';cursor:pointer;margin-left:6px">'+(isFechada?'✓ fechada':'fechar')+'</button>':'';
+      return '<div class="cat-item" style="'+(isFechada?'opacity:.7':'')+'"><div class="cat-head"><span class="cat-name">'+c.name+fecharBtn+'</span><span class="cat-v">'+fmt(c.val)+(c.limit>0?' / '+fmt(c.limit):'')+'</span></div><div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'+restanteHtml+'</div>';
     }).join('');
 
     // Recorrentes do ciclo
@@ -555,8 +573,10 @@ function renderDash(){
         '<div class="proj-val" style="color:'+(projSaldo>=0?'var(--moss)':'var(--terracota)')+'\">'+(projSaldo>=0?'+':'')+fmt(projSaldo)+'</div>'+
         '<div class="proj-detail">Receitas '+fmt(totInc)+' − Despesas atuais '+fmt(totExp)+'</div></div>'+
       '</div>'+
+      '<div class="card"><div class="card-title">Caixa da sobra <small>acumulado</small></div>'+buildCaixaCard(projSaldo)+'</div>'+
       '<div class="card"><div class="card-title">Bolo do casal <small>individual · conjunto</small></div>'+boloHtml+'</div>'+
-      (carr.length?'<div class="card"><div class="card-title">Por categoria <small>com limites</small></div><div class="cat-list">'+catHtml+'</div></div>':'')+
+      (carr.length?'<div class="card"><div class="card-title">Por categoria <small>com limites</small></div><div class="cat-list">'+catHtml2+'</div></div>':'')+
+      '<div class="card"><div class="card-title">Fundo de sobras <small>'+fmt(CAIXA.fundo)+'</small></div>'+buildFundoCard()+'</div>'+
       (recur.length?'<div class="card"><div class="card-title">Gastos fixos do ciclo</div>'+recurHtml+'</div>':'')+
       '<div class="card"><div class="card-title">Evolução dos saldos <small>últimos 3 ciclos</small></div><div id="chart-slot"></div></div>'+
       noteHtml+
@@ -791,7 +811,7 @@ function submitTx(){
   var recur=document.getElementById('f-recur').checked;
   var pay=document.getElementById('f-pay')?document.getElementById('f-pay').value:'';
   var autoPaid=TX_TYPE==='income';
-  var nature=TX_TYPE==='income'?who:TX_NATURE;
+  var nature=TX_TYPE==='income'?'conjunto':TX_NATURE;
   if(!desc||!val||val<=0){toast('Preencha descrição e valor','err');return;}
   var btn=document.getElementById('btn-save');btn.disabled=true;btn.textContent='Registrando...';
   sbPost('fin_transactions',{description:desc,amount:val,category:cat,date:date,month:mon,type:TX_TYPE,user_name:who,nature:nature,payment:pay,paid:autoPaid,obs:obs,recurring:recur,created_by:USER}).then(function(){
@@ -853,6 +873,190 @@ function filterH(){
       '</div>'+extraHtml;
     if(list)list.innerHTML='<div class="tx-list">'+rows.map(mkTx).join('')+'</div><div class="hist-summary"><span>'+rows.length+' lançamentos</span><span style="color:'+(bal>=0?'var(--moss)':'var(--terracota)')+'\">'+(bal>=0?'+':'')+fmt(bal)+'</span></div>';
   }).catch(function(e){if(list)list.innerHTML='<div style="color:var(--terracota);font-size:14px">Erro: '+e.message+'</div>';});
+}
+
+// ── FUNDO DE SOBRAS ──
+function buildFundoCard(){
+  var total=CAIXA.fundo;
+  var histRecente=CAIXA.historico.filter(function(h){return h.tipo==='fundo_entrada'||h.tipo==='fundo_saida'||h.tipo==='retirada'||h.tipo==='entrada';}).slice(-4).reverse();
+  var histHtml=histRecente.length?histRecente.map(function(h){
+    var entrada=h.tipo==='fundo_entrada'||h.tipo==='entrada';
+    return '<div class="caixa-hist-item"><span>'+h.label+'</span><span style="color:'+(entrada?'var(--moss)':'var(--terracota)')+'\">'+(entrada?'+':'−')+fmt(h.valor)+'</span></div>';
+  }).join(''):'<div style="font-family:\'IM Fell English\',serif;font-style:italic;font-size:13px;color:var(--ink4)">Nenhuma movimentação ainda.</div>';
+  return '<div style="font-family:\'Playfair Display\',serif;font-size:24px;font-weight:700;color:'+(total>0?'var(--moss)':'var(--ink4)')+';margin-bottom:4px">'+fmt(total)+'</div>'+
+    '<div style="font-family:\'IM Fell English\',serif;font-style:italic;font-size:12px;color:var(--ink4);margin-bottom:12px">Acumulado de sobras de categorias fechadas</div>'+
+    '<div class="caixa-hist" style="margin-top:0;border-top:none;padding-top:0;margin-bottom:12px">'+histHtml+'</div>'+
+    '<div class="caixa-actions">'+
+      '<button class="btn-caixa" onclick="openEnviarParaMetas()" style="border-color:var(--moss);color:var(--moss)">→ Enviar para metas</button>'+
+      '<button class="btn-caixa retirar" onclick="openUsarFundo()">↓ Usar agora</button>'+
+    '</div>';
+}
+
+function fecharCat(cycleKey,catName,gasto,limite){
+  var sobra=limite-gasto;
+  document.getElementById('modal-content').innerHTML=
+    '<h3>Fechar "'+catName+'"</h3>'+
+    '<div style="font-family:\'IM Fell English\',serif;font-style:italic;font-size:14px;color:var(--ink3);margin-bottom:16px">'+
+      'Previsto: <strong>'+fmt(limite)+'</strong> · Gasto: <strong>'+fmt(gasto)+'</strong><br>'+
+      '<span style="color:'+(sobra>=0?'var(--moss)':'var(--terracota)')+'">'+(sobra>=0?'Sobra: +'+fmt(sobra):'Falta: '+fmt(Math.abs(sobra)))+'</span>'+
+    '</div>'+
+    (sobra>0?'<div class="field"><label>Valor a enviar para o fundo (R$)</label><input type="number" id="fc2-val" value="'+sobra.toFixed(2)+'" min="0" step="0.01"></div>':
+             '<div style="padding:10px;background:var(--terracota-dim);border-radius:var(--rs);font-size:13px;color:var(--terracota);margin-bottom:8px">Esta categoria estourou o limite em '+fmt(Math.abs(sobra))+'.</div>')+
+    '<div class="modal-actions">'+
+      '<button class="btn-primary" onclick="confirmarFecharCat(\''+cycleKey+'\',\''+catName+'\','+(sobra>=0?sobra:0)+')">Fechar caixinha</button>'+
+      '<button class="btn-secondary" onclick="closeModal()">Cancelar</button>'+
+    '</div>';
+  document.getElementById('modal-bg').classList.add('show');
+}
+
+function confirmarFecharCat(cycleKey,catName,sobraPadrao){
+  var valEl=document.getElementById('fc2-val');
+  var val=valEl?parseFloat(valEl.value)||0:0;
+  if(!CAIXA.fechadas)CAIXA.fechadas={};
+  if(!CAIXA.fechadas[cycleKey])CAIXA.fechadas[cycleKey]={};
+  CAIXA.fechadas[cycleKey][catName]=true;
+  if(val>0){
+    CAIXA.fundo=Number(CAIXA.fundo)+val;
+    CAIXA.historico.push({label:catName+' fechada',valor:val,tipo:'fundo_entrada',data:fmtDate(new Date())});
+  }
+  saveCFG('caixa',JSON.stringify(CAIXA));
+  closeModal();toast(catName+' fechada!','ok');goTo('dashboard');
+}
+
+function reabrirCat(cycleKey,catName){
+  if(CAIXA.fechadas&&CAIXA.fechadas[cycleKey]&&CAIXA.fechadas[cycleKey][catName]){
+    // reverte a última entrada do fundo relacionada a esta categoria
+    var idx=CAIXA.historico.map(function(h,i){return{h:h,i:i};}).reverse().find(function(x){
+      return x.h.label===catName+' fechada'&&x.h.tipo==='fundo_entrada';
+    });
+    if(idx){
+      CAIXA.fundo=Math.max(0,Number(CAIXA.fundo)-Number(idx.h.valor));
+      CAIXA.historico.splice(idx.i,1);
+    }
+    delete CAIXA.fechadas[cycleKey][catName];
+    saveCFG('caixa',JSON.stringify(CAIXA));
+    toast(catName+' reaberta — valor devolvido ao fundo','ok');
+    goTo('dashboard');
+  }
+}
+
+function openEnviarParaMetas(){
+  if(CAIXA.fundo<=0){toast('Fundo vazio','err');return;}
+  var goalsOpts=GOALS.map(function(g,i){return '<option value="'+i+'">'+g.name+' ('+fmt(g.saved)+'/'+fmt(g.target)+')</option>';}).join('');
+  document.getElementById('modal-content').innerHTML=
+    '<h3>Enviar para metas</h3>'+
+    '<div style="font-family:\'IM Fell English\',serif;font-style:italic;font-size:14px;color:var(--ink3);margin-bottom:14px">Fundo disponível: <strong style="color:var(--moss)">'+fmt(CAIXA.fundo)+'</strong></div>'+
+    '<div class="field"><label>Meta de destino</label><select id="em-goal">'+goalsOpts+'</select></div>'+
+    '<div class="field" style="margin-top:9px"><label>Valor (R$)</label><input type="number" id="em-val" value="'+CAIXA.fundo.toFixed(2)+'" min="0" step="0.01" max="'+CAIXA.fundo+'"></div>'+
+    '<div class="modal-actions"><button class="btn-primary" onclick="confirmarEnviarMetas()">Enviar</button><button class="btn-secondary" onclick="closeModal()">Cancelar</button></div>';
+  document.getElementById('modal-bg').classList.add('show');
+}
+
+function confirmarEnviarMetas(){
+  var val=parseFloat(document.getElementById('em-val').value);
+  var idx=parseInt(document.getElementById('em-goal').value);
+  if(!val||val<=0){toast('Informe um valor','err');return;}
+  if(val>CAIXA.fundo){toast('Valor maior que o fundo','err');return;}
+  CAIXA.fundo=Number(CAIXA.fundo)-val;
+  GOALS[idx].saved=Number(GOALS[idx].saved)+val;
+  CAIXA.historico.push({label:'→ '+GOALS[idx].name,valor:val,tipo:'fundo_saida',data:fmtDate(new Date())});
+  saveCFG('caixa',JSON.stringify(CAIXA));
+  saveCFG('goals',JSON.stringify(GOALS));
+  closeModal();toast('Enviado para '+GOALS[idx].name+'!','ok');goTo('dashboard');
+}
+
+function openUsarFundo(){
+  if(CAIXA.fundo<=0){toast('Fundo vazio','err');return;}
+  var catsOpts=CATS.filter(function(c){return c.limit>0;}).map(function(c){return '<option value="'+c.name+'">'+c.name+'</option>';}).join('');
+  document.getElementById('modal-content').innerHTML=
+    '<h3>Usar fundo de sobras</h3>'+
+    '<div style="font-family:\'IM Fell English\',serif;font-style:italic;font-size:14px;color:var(--ink3);margin-bottom:14px">Fundo disponível: <strong style="color:var(--moss)">'+fmt(CAIXA.fundo)+'</strong></div>'+
+    '<div class="field"><label>Destino</label><select id="uf-cat"><option value="_livre">Uso livre</option>'+catsOpts+'</select></div>'+
+    '<div class="field" style="margin-top:9px"><label>Valor (R$)</label><input type="number" id="uf-val" placeholder="0,00" min="0" step="0.01" max="'+CAIXA.fundo+'"></div>'+
+    '<div class="field" style="margin-top:9px"><label>Motivo</label><input type="text" id="uf-obs" placeholder="Ex: Conta de energia extra..."></div>'+
+    '<div class="modal-actions"><button class="btn-primary" style="background:var(--terracota)" onclick="confirmarUsarFundo()">Usar</button><button class="btn-secondary" onclick="closeModal()">Cancelar</button></div>';
+  document.getElementById('modal-bg').classList.add('show');
+}
+
+function confirmarUsarFundo(){
+  var val=parseFloat(document.getElementById('uf-val').value);
+  var dest=document.getElementById('uf-cat').value;
+  var obs=document.getElementById('uf-obs').value.trim();
+  if(!val||val<=0){toast('Informe um valor','err');return;}
+  if(val>CAIXA.fundo){toast('Valor maior que o fundo','err');return;}
+  CAIXA.fundo=Number(CAIXA.fundo)-val;
+  CAIXA.historico.push({label:obs||(dest==='_livre'?'Uso livre':dest),valor:val,tipo:'retirada',data:fmtDate(new Date())});
+  saveCFG('caixa',JSON.stringify(CAIXA));
+  closeModal();toast('Retirado do fundo!','ok');goTo('dashboard');
+}
+
+// ── CAIXA DA SOBRA ──
+function caixaTotal(){return CAIXA.cats.reduce(function(s,c){return s+Number(c.valor);},0);}
+
+function buildCaixaCard(projSaldo){
+  var total=caixaTotal();
+  var catsHtml=CAIXA.cats.map(function(c){
+    return '<div class="caixa-cat">'+
+      '<span class="caixa-cat-name" style="color:'+c.color+'">'+c.name+'</span>'+
+      '<span class="caixa-cat-val" style="color:'+c.color+'">'+fmt(c.valor)+'</span>'+
+    '</div>';
+  }).join('');
+  var histHtml=CAIXA.historico.length?
+    '<div class="caixa-hist">'+CAIXA.historico.slice(-3).reverse().map(function(h){
+      return '<div class="caixa-hist-item"><span>'+h.label+(h.cat?' · '+h.cat:'')+'</span><span style="color:'+(h.tipo==='entrada'?'var(--moss)':'var(--terracota)')+'\">'+(h.tipo==='entrada'?'+':'−')+fmt(h.valor)+'</span></div>';
+    }).join('')+'</div>':'';
+  return '<div class="caixa-total">'+fmt(total)+'</div>'+
+    '<div class="caixa-sub">Sobra projetada deste ciclo: '+(projSaldo>0?'<strong style="color:var(--moss)">+'+fmt(projSaldo)+'</strong>':'<span style="color:var(--ink4)">'+fmt(projSaldo)+'</span>')+'</div>'+
+    catsHtml+
+    '<div class="caixa-actions">'+
+      '<button class="btn-caixa" onclick="openFecharCiclo('+projSaldo+')">✦ Fechar ciclo</button>'+
+      '<button class="btn-caixa retirar" onclick="openRetirarCaixa()">↓ Retirar</button>'+
+    '</div>'+histHtml;
+}
+
+function openFecharCiclo(sobra){
+  var catsOpts=CAIXA.cats.map(function(c,i){return '<option value="'+i+'">'+c.name+'</option>';}).join('');
+  document.getElementById('modal-content').innerHTML=
+    '<h3>Fechar ciclo</h3>'+
+    '<div style="font-family:\'IM Fell English\',serif;font-style:italic;font-size:14px;color:var(--ink3);margin-bottom:16px">Sobra calculada: <strong style="color:var(--moss)">'+fmt(Math.max(0,sobra))+'</strong></div>'+
+    '<div class="field"><label>Ajustar valor da sobra (R$)</label><input type="number" id="fc-val" value="'+Math.max(0,sobra).toFixed(2)+'" min="0" step="0.01"></div>'+
+    '<div class="field" style="margin-top:9px"><label>Distribuir para</label><select id="fc-cat">'+catsOpts+'</select></div>'+
+    '<div class="field" style="margin-top:9px"><label>Observação (opcional)</label><input type="text" id="fc-obs" placeholder="Ex: Fechamento maio/junho..."></div>'+
+    '<div class="modal-actions"><button class="btn-primary" onclick="confirmarFecharCiclo()">Adicionar ao caixa</button><button class="btn-secondary" onclick="closeModal()">Cancelar</button></div>';
+  document.getElementById('modal-bg').classList.add('show');
+}
+function confirmarFecharCiclo(){
+  var val=parseFloat(document.getElementById('fc-val').value);
+  var idx=parseInt(document.getElementById('fc-cat').value);
+  var obs=document.getElementById('fc-obs').value.trim();
+  if(!val||val<=0){toast('Informe um valor','err');return;}
+  CAIXA.cats[idx].valor=Number(CAIXA.cats[idx].valor)+val;
+  var d=new Date();
+  CAIXA.historico.push({label:obs||'Fechamento '+fmtDateShort(d),valor:val,tipo:'entrada',cat:CAIXA.cats[idx].name,data:fmtDate(d)});
+  saveCFG('caixa',JSON.stringify(CAIXA));
+  closeModal();toast('Adicionado ao caixa!','ok');goTo('dashboard');
+}
+function openRetirarCaixa(){
+  var catsOpts=CAIXA.cats.map(function(c,i){return '<option value="'+i+'">'+c.name+' ('+fmt(c.valor)+')</option>';}).join('');
+  document.getElementById('modal-content').innerHTML=
+    '<h3>Retirar do caixa</h3>'+
+    '<div class="field"><label>Retirar de</label><select id="rt-cat">'+catsOpts+'</select></div>'+
+    '<div class="field" style="margin-top:9px"><label>Valor (R$)</label><input type="number" id="rt-val" placeholder="0,00" min="0" step="0.01"></div>'+
+    '<div class="field" style="margin-top:9px"><label>Motivo</label><input type="text" id="rt-obs" placeholder="Ex: Viagem, Conserto carro..."></div>'+
+    '<div class="modal-actions"><button class="btn-primary" style="background:var(--terracota)" onclick="confirmarRetirarCaixa()">Retirar</button><button class="btn-secondary" onclick="closeModal()">Cancelar</button></div>';
+  document.getElementById('modal-bg').classList.add('show');
+}
+function confirmarRetirarCaixa(){
+  var val=parseFloat(document.getElementById('rt-val').value);
+  var idx=parseInt(document.getElementById('rt-cat').value);
+  var obs=document.getElementById('rt-obs').value.trim();
+  if(!val||val<=0){toast('Informe um valor','err');return;}
+  if(val>Number(CAIXA.cats[idx].valor)){toast('Saldo insuficiente nesta categoria','err');return;}
+  CAIXA.cats[idx].valor=Number(CAIXA.cats[idx].valor)-val;
+  var d=new Date();
+  CAIXA.historico.push({label:obs||'Retirada',valor:val,tipo:'retirada',cat:CAIXA.cats[idx].name,data:fmtDate(d)});
+  saveCFG('caixa',JSON.stringify(CAIXA));
+  closeModal();toast('Retirado do caixa!','ok');goTo('dashboard');
 }
 
 // ── COMPARATIVO ──
@@ -1045,6 +1249,18 @@ function renderCfg(){
       '<div class="field" style="margin-top:8px"><input type="text" id="p-cname" value="'+(CFG.cycle_name||'')+'" placeholder="Nome opcional para este ciclo..."></div>'+
       '<button class="btn-primary" onclick="saveCycleConfig()">Salvar ciclo</button>'+
     '</div>'+
+    '<div class="card"><div class="card-title">Caixa da sobra <small>categorias</small></div>'+
+      '<div class="cat-mgr">'+
+        CAIXA.cats.map(function(c,i){
+          return '<div class="cat-row">'+
+            '<input style="background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--ink2);padding:2px 4px;font-size:14px;font-family:\'Crimson Pro\',serif;outline:none;flex:1;min-width:0" value="'+c.name+'" onblur="renameCaixa('+i+',this.value)" onkeydown="if(event.key===\'Enter\')this.blur()">'+
+            '<span style="font-family:\'Playfair Display\',serif;font-size:13px;color:var(--moss);margin:0 10px">'+fmt(c.valor)+'</span>'+
+            '<button class="btn-x" onclick="remCaixa('+i+')">×</button>'+
+          '</div>';
+        }).join('')+
+      '</div>'+
+      '<div class="add-row"><input class="add-input" id="new-caixa" placeholder="Nova categoria..." onkeydown="if(event.key===\'Enter\')addCaixa()"><button class="btn-add" onclick="addCaixa()">+</button></div>'+
+    '</div>'+
     '<div class="card"><div class="card-title">Exportar dados</div>'+
       '<div class="srow"><div><span class="slabel">Exportar ciclo atual (CSV)</span><div class="sdesc">Abre no Excel, Numbers ou Google Sheets</div></div>'+
       '<button onclick="exportCycle()" style="background:var(--moss-dim);border:1px solid var(--moss);color:var(--moss);padding:6px 12px;border-radius:var(--rs);font-family:\'Crimson Pro\',serif;font-size:13px;cursor:pointer">Exportar</button></div>'+
@@ -1074,6 +1290,23 @@ function saveCycleConfig(){
   CFG.cycle_start=v;CFG.cycle_name=name;
   saveCFG('cycle_start',v);saveCFG('cycle_name',name);
   toast('Ciclo salvo!','ok');renderCfg();
+}
+function renameCaixa(i,v){
+  v=v.trim();if(!v){toast('Nome não pode ser vazio','err');renderCfg();return;}
+  var dup=CAIXA.cats.findIndex(function(c,idx){return c.name===v&&idx!==i;});
+  if(dup>=0){toast('Já existe','err');renderCfg();return;}
+  CAIXA.cats[i].name=v;saveCFG('caixa',JSON.stringify(CAIXA));toast('Renomeado!','ok');
+}
+function remCaixa(i){
+  if(CAIXA.cats[i].valor>0){toast('Transfira o saldo antes de remover','err');return;}
+  CAIXA.cats.splice(i,1);saveCFG('caixa',JSON.stringify(CAIXA));toast('Removido','ok');renderCfg();
+}
+function addCaixa(){
+  var v=document.getElementById('new-caixa').value.trim();if(!v)return;
+  if(CAIXA.cats.find(function(c){return c.name===v;})){toast('Já existe','err');return;}
+  var colors=['var(--moss)','var(--mustard)','var(--rose)','var(--terracota)'];
+  CAIXA.cats.push({name:v,valor:0,color:colors[CAIXA.cats.length%colors.length]});
+  saveCFG('caixa',JSON.stringify(CAIXA));toast('Adicionado!','ok');renderCfg();
 }
 function renamePay(i,v){
   v=v.trim();
