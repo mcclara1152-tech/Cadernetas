@@ -352,6 +352,7 @@ body{background:var(--cream);color:var(--ink);font-family:'Crimson Pro',Georgia,
     <button class="nav-btn active" onclick="goTo('dashboard')">Resumo</button>
     <button class="nav-btn" onclick="goTo('lancamento')">Lançar</button>
     <button class="nav-btn" onclick="goTo('historico')">Histórico</button>
+    <button class="nav-btn" onclick="goTo('caixinhas')">Caixinhas</button>
     <button class="nav-btn" onclick="goTo('metas')">Metas</button>
     <button class="nav-btn" onclick="goTo('config')">Configurações</button>
   </div>
@@ -377,11 +378,12 @@ function sbDel(t,id){return sbApi('DELETE',t,null,'?id=eq.'+id);}
 function sbPatch(t,id,b){return sbApi('PATCH',t,b,'?id=eq.'+id);}
 
 var USER=null,TX_TYPE='expense',TX_NATURE='conjunto',gid=10;
-var PAGES=['dashboard','lancamento','historico','metas','config'];
+var PAGES=['dashboard','lancamento','historico','caixinhas','metas','config'];
 var CFG={m:58,mu:42,cycle_start:1,cycle_name:'',dark:false};
 var CATS=[{name:'Moradia',limit:0},{name:'Alimentação',limit:0},{name:'Transporte',limit:0},{name:'Saúde',limit:0},{name:'Lazer',limit:500},{name:'Educação',limit:0},{name:'Pets',limit:200},{name:'Outros',limit:0}];
 var GOALS=[{id:1,name:'Viagem juntos',target:3000,saved:800,color:'var(--mustard)'},{id:2,name:'Fundo de emergência',target:10000,saved:3200,color:'var(--moss)'}];
 var PAYMENTS=['Crédito Nubank','Crédito C6','Débito Itaú','Pix','Dinheiro'];
+var INC_CATS=['Salário','Freelance','Presente','Reembolso','Outros'];
 var CAIXA={fundo:0,cats:[{name:'Poupança',valor:0,color:'var(--moss)'},{name:'Reserva de emergência',valor:0,color:'var(--mustard)'},{name:'Livre',valor:0,color:'var(--rose)'}],fechadas:{},historico:[]};
 
 // ── UTILS ──
@@ -448,6 +450,7 @@ function loadCFG(){
       if(r.key==='cats'){try{CATS=JSON.parse(r.value);}catch(e){}}
       if(r.key==='goals'){try{GOALS=JSON.parse(r.value);}catch(e){}}
       if(r.key==='payments'){try{PAYMENTS=JSON.parse(r.value);}catch(e){}}
+      if(r.key==='inc_cats'){try{INC_CATS=JSON.parse(r.value);}catch(e){}}
       if(r.key==='caixa'){try{CAIXA=JSON.parse(r.value);}catch(e){}}
     });
     applyTheme();
@@ -480,6 +483,7 @@ function goTo(page){
     if(page==='dashboard')renderDash();
     if(page==='lancamento')renderForm();
     if(page==='historico')renderHist();
+    if(page==='caixinhas')renderCaixinhas();
     if(page==='metas')renderMetas();
     if(page==='config')renderCfg();
   };
@@ -1190,6 +1194,81 @@ function saveEditGoal(id){
   if(g){g.name=name;g.target=target;g.saved=saved;}
   saveCFG('goals',JSON.stringify(GOALS));closeModal();toast('Meta atualizada!','ok');renderMetas();
 }
+// ── CAIXINHAS ──
+function renderCaixinhas(){
+  var cycle=curCycle();
+  fetchRows(cycle.start,cycle.end,'expense').then(function(exp){
+    var cmap={};
+    exp.forEach(function(t){cmap[t.category]=(cmap[t.category]||0)+Number(t.amount);});
+    var fechadas=(CAIXA.fechadas&&CAIXA.fechadas[cycle.start])||{};
+    var catsComLimite=CATS.filter(function(c){return c.limit>0;});
+    var caixinhasHtml=catsComLimite.length?catsComLimite.map(function(c){
+      var gasto=cmap[c.name]||0;
+      var pct=Math.min(100,Math.round(gasto/c.limit*100));
+      var sobra=c.limit-gasto;
+      var over=gasto>c.limit;
+      var exact=gasto===c.limit;
+      var near=gasto>=c.limit*0.8&&!over&&!exact;
+      var color=over||exact?'var(--terracota)':near?'var(--mustard)':'var(--moss)';
+      var isFechada=!!fechadas[c.name];
+      var statusBadge=isFechada?
+        '<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:var(--moss-dim);color:var(--moss);border:1px solid var(--moss);margin-left:6px">✓ fechada</span>':
+        over?'<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:var(--terracota-dim);color:var(--terracota);border:1px solid var(--terracota);margin-left:6px">estourada</span>':
+        near?'<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:var(--mustard-dim);color:var(--mustard);border:1px solid var(--mustard);margin-left:6px">quase no limite</span>':'';
+      return '<div class="card" style="'+(isFechada?'opacity:.75':'')+'">'+
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">'+
+          '<div><div style="font-family:\'Playfair Display\',serif;font-size:16px;font-weight:700;color:var(--ink)">'+c.name+statusBadge+'</div>'+
+          '<div style="font-family:\'IM Fell English\',serif;font-style:italic;font-size:12px;color:var(--ink4);margin-top:3px">Ciclo '+cycle.label+'</div></div>'+
+          '<div style="font-family:\'Playfair Display\',serif;font-size:22px;font-weight:700;color:'+color+'">'+pct+'%</div>'+
+        '</div>'+
+        '<div class="cat-bar-wrap" style="height:8px;margin-bottom:12px"><div class="cat-bar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">'+
+          '<div style="background:var(--cream2);border:1px solid var(--border);border-radius:var(--rs);padding:9px;text-align:center">'+
+            '<div style="font-size:10px;color:var(--ink4);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px">Limite</div>'+
+            '<div style="font-family:\'Playfair Display\',serif;font-size:13px;font-weight:700;color:var(--ink2)">'+fmt(c.limit)+'</div>'+
+          '</div>'+
+          '<div style="background:var(--cream2);border:1px solid var(--border);border-radius:var(--rs);padding:9px;text-align:center">'+
+            '<div style="font-size:10px;color:var(--ink4);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px">Usado</div>'+
+            '<div style="font-family:\'Playfair Display\',serif;font-size:13px;font-weight:700;color:var(--terracota)">'+fmt(gasto)+'</div>'+
+          '</div>'+
+          '<div style="background:var(--cream2);border:1px solid var(--border);border-radius:var(--rs);padding:9px;text-align:center">'+
+            '<div style="font-size:10px;color:var(--ink4);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px">'+(over?'Excesso':'Sobra')+'</div>'+
+            '<div style="font-family:\'Playfair Display\',serif;font-size:13px;font-weight:700;color:'+(over?'var(--terracota)':'var(--moss)')+'\">'+(over?'+':'')+fmt(Math.abs(sobra))+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="display:flex;gap:7px">'+
+          (isFechada?
+            '<button class="btn-secondary" style="flex:1;margin-top:0" onclick="reabrirCat(\''+cycle.start+'\',\''+c.name+'\')">Reabrir</button>':
+            '<button class="btn-primary" style="flex:1;margin-top:0;font-size:13px" onclick="fecharCat(\''+cycle.start+'\',\''+c.name+'\','+gasto+','+c.limit+')">Fechar caixinha</button>')+
+          (!isFechada&&over?'<button class="btn-secondary" style="flex:1;margin-top:0;font-size:13px" onclick="openUsarFundo()">Pedir do fundo</button>':'')+
+        '</div>'+
+      '</div>';
+    }).join(''):'<div class="empty">Nenhuma categoria com limite configurado.<br>Configure em <strong>Configurações → Categorias</strong>.</div>';
+
+    var fundoHtml='<div class="card">'+
+      '<div class="card-title">Fundo de sobras</div>'+
+      '<div style="font-family:\'Playfair Display\',serif;font-size:26px;font-weight:700;color:'+(CAIXA.fundo>0?'var(--moss)':'var(--ink4)')+';margin-bottom:4px">'+fmt(CAIXA.fundo)+'</div>'+
+      '<div style="font-family:\'IM Fell English\',serif;font-style:italic;font-size:12px;color:var(--ink4);margin-bottom:14px">Acumulado de sobras de caixinhas fechadas</div>'+
+      (CAIXA.historico.length?
+        '<div style="margin-bottom:14px">'+CAIXA.historico.slice(-5).reverse().map(function(h){
+          var entrada=h.tipo==='fundo_entrada'||h.tipo==='entrada';
+          return '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">'+
+            '<span style="color:var(--ink3)">'+h.label+'</span>'+
+            '<span style="font-family:\'Playfair Display\',serif;color:'+(entrada?'var(--moss)':'var(--terracota)')+'\">'+(entrada?'+':'−')+fmt(h.valor)+'</span>'+
+          '</div>';
+        }).join('')+'</div>':'<div class="empty" style="padding:14px">Nenhuma movimentação ainda.</div>')+
+      '<div class="caixa-actions">'+
+        '<button class="btn-caixa" onclick="openEnviarParaMetas()" style="border-color:var(--moss);color:var(--moss)">→ Enviar para metas</button>'+
+        '<button class="btn-caixa retirar" onclick="openUsarFundo()">↓ Usar agora</button>'+
+      '</div>'+
+    '</div>';
+
+    document.getElementById('main').innerHTML=
+      '<div class="page-header"><div class="orn-sm">— ✿ —</div><h2><em>Caixinhas</em></h2><p>Ciclo '+cycle.label+' · '+catsComLimite.length+' caixinhas configuradas</p></div>'+
+      caixinhasHtml+fundoHtml;
+  }).catch(function(e){errBox(e.message);});
+}
+
 function renderMetas(){
   var html=GOALS.length?GOALS.map(function(g){var pct=Math.min(100,Math.round(g.saved/g.target*100));return '<div class="goal-item"><div class="goal-head"><div><div class="goal-name">'+g.name+'</div><div class="goal-target">Meta: '+fmt(g.target)+'</div></div><span class="goal-pct" style="color:'+g.color+'">'+pct+'%</span></div><div class="goal-bar-wrap"><div class="goal-bar-fill" style="width:'+pct+'%;background:'+g.color+'"></div></div><div class="goal-meta"><span style="color:var(--moss)">'+fmt(g.saved)+' guardados</span><span>faltam '+fmt(Math.max(0,g.target-g.saved))+'</span></div><div class="goal-actions"><button class="btn-goal" onclick="openContrib('+g.id+')">+ Contribuir</button><button class="btn-goal" onclick="openEditGoal('+g.id+')">✎ Editar</button><button class="btn-goal del" onclick="removeGoal('+g.id+')">Remover</button></div></div>';}).join(''):'<div class="empty">Nenhuma meta cadastrada ainda.</div>';
   document.getElementById('main').innerHTML=
@@ -1276,7 +1355,18 @@ function renderCfg(){
       '</div>'+
       '<div class="add-row"><input class="add-input" id="new-pay" placeholder="Ex: Crédito Inter..." onkeydown="if(event.key===\'Enter\')addPay()"><button class="btn-add" onclick="addPay()">+</button></div>'+
     '</div>'+
-    '<div class="card"><div class="card-title">Categorias <small>clique no nome para renomear</small></div>'+
+    '<div class="card"><div class="card-title">Categorias de receita <small>clique para renomear</small></div>'+
+      '<div class="cat-mgr">'+
+        INC_CATS.map(function(c,i){
+          return '<div class="cat-row">'+
+            '<input style="background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--ink2);padding:2px 4px;font-size:14px;font-family:\'Crimson Pro\',serif;outline:none;flex:1;min-width:0" value="'+c+'" onblur="renameIncCat('+i+',this.value)" onkeydown="if(event.key===\'Enter\')this.blur()">'+
+            '<button class="btn-x" onclick="remIncCat('+i+')">×</button>'+
+          '</div>';
+        }).join('')+
+      '</div>'+
+      '<div class="add-row"><input class="add-input" id="new-inc-cat" placeholder="Nova categoria..." onkeydown="if(event.key===\'Enter\')addIncCat()"><button class="btn-add" onclick="addIncCat()">+</button></div>'+
+    '</div>'+
+    '<div class="card"><div class="card-title">Categorias de despesa <small>clique no nome para renomear</small></div>'+
       '<div class="cat-mgr">'+catRows+'</div>'+
       '<div class="add-row"><input class="add-input" id="new-cat" placeholder="Nova categoria..." onkeydown="if(event.key===\'Enter\')addCat()"><button class="btn-add" onclick="addCat()">+</button></div>'+
     '</div>';
@@ -1321,6 +1411,23 @@ function addPay(){
   if(!v)return;
   if(PAYMENTS.indexOf(v)>=0){toast('Já existe','err');return;}
   PAYMENTS.push(v);saveCFG('payments',JSON.stringify(PAYMENTS));toast('Adicionado','ok');renderCfg();
+}
+function renameIncCat(i,v){
+  v=v.trim();
+  if(!v){toast('Nome não pode ser vazio','err');renderCfg();return;}
+  var dup=INC_CATS.findIndex(function(c,idx){return c===v&&idx!==i;});
+  if(dup>=0){toast('Já existe','err');renderCfg();return;}
+  INC_CATS[i]=v;saveCFG('inc_cats',JSON.stringify(INC_CATS));toast('Renomeado!','ok');
+}
+function remIncCat(i){
+  if(INC_CATS.length<=1){toast('Precisa ter ao menos uma categoria','err');return;}
+  INC_CATS.splice(i,1);saveCFG('inc_cats',JSON.stringify(INC_CATS));toast('Removida','ok');renderCfg();
+}
+function addIncCat(){
+  var v=document.getElementById('new-inc-cat').value.trim();
+  if(!v)return;
+  if(INC_CATS.indexOf(v)>=0){toast('Já existe','err');return;}
+  INC_CATS.push(v);saveCFG('inc_cats',JSON.stringify(INC_CATS));toast('Adicionada','ok');renderCfg();
 }
 function renameCAT(i,v){
   v=v.trim();
